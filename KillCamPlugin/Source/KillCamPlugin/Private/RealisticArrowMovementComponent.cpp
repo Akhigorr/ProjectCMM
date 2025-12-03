@@ -1,6 +1,7 @@
 #include "RealisticArrowMovementComponent.h"
 #include "GameFramework/Actor.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/ShapeComponent.h"
 
 URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 {
@@ -29,16 +30,31 @@ void URealisticArrowMovementComponent::TickComponent(float DeltaTime, enum ELeve
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!UpdatedComponent || !UpdatedComponent->IsSimulatingPhysics())
+	if (Velocity.SizeSquared() > 1.0f)
 	{
-		// Even if kinematic, we might want to update oscillation/rotation if flying
-		if (Velocity.SizeSquared() > 1.0f)
+		// --- Fletching Rotation (Spin) ---
+		// Since bRotationFollowsVelocity locks the root rotation, we can't easily roll the root.
+		// However, for visual effect, we should ideally rotate the mesh.
+		// A simple hack for single-mesh actors is to apply local roll to the Root if RotationFollowsVelocity allows,
+		// but since it overwrites, we must rely on the user rotating the mesh in material or a child component.
+
+		// Correction: We can accumulate Roll in a variable and apply it *on top* of the Velocity rotation if we override UpdateRotation,
+		// but that's complex. For this plugin, let's try to find a MeshComponent and spin that.
+		AActor* Owner = GetOwner();
+		if (Owner)
 		{
-			// --- Fletching Rotation (Spin) ---
-			// Apply roll around the forward axis
-			FRotator CurrentRot = UpdatedComponent->GetComponentRotation();
-			FRotator RollRot = FRotator(0.0f, 0.0f, FletchingRotationSpeed * DeltaTime);
-			UpdatedComponent->SetWorldRotation(CurrentRot + RollRot); // Simple addition works for local roll roughly
+			// Find the first mesh (that isn't the root, or if it is the root, we can't spin it easily with FollowVelocity on).
+			// If the user setup is Root(Scene) -> Mesh, we can spin the Mesh.
+			TArray<UPrimitiveComponent*> Comps;
+			Owner->GetComponents(Comps);
+			for (UPrimitiveComponent* Comp : Comps)
+			{
+				if (Comp != UpdatedComponent && !Comp->IsA<UShapeComponent>()) // Avoid spinning the collision capsule
+				{
+					Comp->AddLocalRotation(FRotator(0.0f, 0.0f, FletchingRotationSpeed * DeltaTime));
+					break; // Spin the first visual mesh we find
+				}
+			}
 		}
 	}
 
@@ -106,6 +122,10 @@ void URealisticArrowMovementComponent::HandleImpact(const FHitResult& Hit, float
 
 void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 {
+	// Cache direction before stopping (Velocity becomes zero)
+	FVector ForwardDir = Velocity.GetSafeNormal();
+	if (ForwardDir.IsZero()) ForwardDir = GetOwner()->GetActorForwardVector();
+
 	StopMovementImmediately();
 
 	// Disable further physics/collision
@@ -116,7 +136,7 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 	}
 
 	// Penetration: Move forward slightly
-	FVector StickLocation = Hit.Location + (Velocity.GetSafeNormal() * PenetrationDepth);
+	FVector StickLocation = Hit.Location + (ForwardDir * PenetrationDepth);
 
 	// Snap to hit location/rotation
 	AActor* HitActor = Hit.GetActor();

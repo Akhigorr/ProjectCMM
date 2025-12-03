@@ -40,6 +40,21 @@ Select the `KillCam` component to tweak these settings:
 *   **Target Time Dilation:** How slow time should get (e.g., `0.1` for 10% speed).
 *   **Prediction Radius:** How wide the "hit box" for the camera trigger is.
 
+### Camera Control & Framing
+
+The plugin can automatically manage the camera view for you.
+
+*   **Auto Switch View:** If checked, the Kill Cam Component will call `SetViewTargetWithBlend` to switch to the arrow when it fires/triggers.
+*   **Post Impact Delay:** How long (seconds) to stay on the arrow after it hits/stops before returning to the player.
+*   **Blend Times:** Control how fast the camera cuts or smoothes to the arrow (`BlendToCamTime`, `BlendBackTime`).
+
+**Framing Presets (on ABaseKillCamArrow):**
+Instead of manually tweaking the SpringArm, select `FramingMode` in the Details panel:
+*   `Standard Rear`: Classic 3rd person follow.
+*   `Cinematic Side`: Cool side-angle shot.
+*   `Top Down`: High angle view.
+*   `Custom`: Use your own SpringArm settings.
+
 ### Realistic Physics Configuration
 
 The `URealisticArrowMovementComponent` provides AAA flight mechanics. Tweaking these values is crucial for feel:

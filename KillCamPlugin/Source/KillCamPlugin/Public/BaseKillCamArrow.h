@@ -9,6 +9,15 @@ class URealisticArrowMovementComponent;
 class USpringArmComponent;
 class UCameraComponent;
 
+UENUM(BlueprintType)
+enum class EKillCamFramingMode : uint8
+{
+	StandardRear	UMETA(DisplayName = "Standard Rear"),
+	CinematicSide	UMETA(DisplayName = "Cinematic Side"),
+	TopDown			UMETA(DisplayName = "Top Down"),
+	Custom			UMETA(DisplayName = "Custom")
+};
+
 UCLASS()
 class KILLCAMPLUGIN_API ABaseKillCamArrow : public AActor
 {
@@ -16,12 +25,27 @@ class KILLCAMPLUGIN_API ABaseKillCamArrow : public AActor
 
 public:
 	ABaseKillCamArrow();
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 protected:
 	virtual void BeginPlay() override;
 
 public:
 	virtual void Tick(float DeltaTime) override;
+
+	// --- Framing Options ---
+
+	/** Choose a preset camera position/angle. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Framing")
+	EKillCamFramingMode FramingMode;
+
+	/** Field of view for the kill cam. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Framing")
+	float KillCamFOV;
+
+	/** Helper to apply the chosen framing mode to the spring arm/camera. */
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Framing")
+	void ApplyFramingPreset();
 
 	// --- Components ---
 

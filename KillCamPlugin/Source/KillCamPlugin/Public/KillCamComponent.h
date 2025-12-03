@@ -72,6 +72,24 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Prediction")
 	float PredictionRadius;
 
+	// --- Camera Control ---
+
+	/** If true, the plugin will automatically take control of the Player Camera. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Camera Control")
+	bool bAutoSwitchView;
+
+	/** How long to wait after the arrow stops (impact) before returning control to the player. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Camera Control")
+	float PostImpactDelay;
+
+	/** Blend time when switching TO the kill cam. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Camera Control")
+	float BlendToCamTime;
+
+	/** Blend time when switching BACK to the player. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Camera Control")
+	float BlendBackTime;
+
 	// --- Events ---
 
 	/** Fired every tick while Kill Cam is active, useful for driving Post Process Materials */
@@ -92,11 +110,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Kill Cam")
 	bool TriggerLookAhead();
 
-	/** Force start the kill cam effect */
+	/** Force start the kill cam effect. If bAutoSwitchView is true, it switches the camera. */
 	UFUNCTION(BlueprintCallable, Category = "Kill Cam")
 	void StartKillCam();
 
-	/** Stop the kill cam effect */
+	/** Stop the kill cam effect and return camera control. */
 	UFUNCTION(BlueprintCallable, Category = "Kill Cam")
 	void StopKillCam();
 
@@ -104,9 +122,17 @@ private:
 	/** Tracks if the kill cam logic is currently running */
 	bool bIsKillCamActive;
 
+	/** Timer handle for the post-impact delay */
+	FTimerHandle TimerHandle_StopCam;
+
 	/** Helper to perform the specific prediction logic */
 	bool PerformPrediction(FHitResult& OutHit);
 
 	/** Cached reference to the owner as an Actor */
 	TWeakObjectPtr<AActor> OwnerActor;
+
+	/** The view target we had before switching */
+	TWeakObjectPtr<AActor> OriginalViewTarget;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };
