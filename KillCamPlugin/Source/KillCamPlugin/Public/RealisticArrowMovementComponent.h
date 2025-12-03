@@ -73,10 +73,39 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Physics|Impact")
 	float PenetrationDepth;
 
+	/** If true, the arrow will attempt to ricochet off surfaces at shallow angles. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Physics|Impact")
+	bool bEnableBounce;
+
+	/** If true, the game will freeze momentarily upon impact (AAA feel). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Physics|Impact")
+	bool bEnableHitStop;
+
+	/** Duration of the hit stop in real-time seconds (e.g., 0.05). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Physics|Impact")
+	float HitStopDuration;
+
+protected:
+	virtual void BeginPlay() override;
+
 private:
 	/** Time since initialization, used for oscillation calc */
 	float TimeAlive;
 
+	/** Cached mesh for spinning */
+	TWeakObjectPtr<UPrimitiveComponent> CachedMeshToSpin;
+
+	/** Stored time dilation to restore after hit stop */
+	float PreHitStopTimeDilation;
+
 	/** Helper to handle sticking logic */
 	void StickToTarget(const FHitResult& Hit);
+
+	/** Trigger the hit stop effect */
+	void PerformHitStop();
+
+	/** End the hit stop effect */
+	void StopHitStop();
+
+	FTimerHandle TimerHandle_HitStop;
 };

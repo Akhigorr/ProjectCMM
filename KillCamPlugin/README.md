@@ -55,18 +55,23 @@ Instead of manually tweaking the SpringArm, select `FramingMode` in the Details 
 *   `Top Down`: High angle view.
 *   `Custom`: Use your own SpringArm settings.
 
+**Smart Obstacle Avoidance:**
+*   `Enable Camera Collision`: If true, the camera will pull in closer if a wall is in the way.
+*   `Camera Probe Size`: Size of the collision check (default 12.0).
+
 ### Realistic Physics Configuration
 
 The `URealisticArrowMovementComponent` provides AAA flight mechanics. Tweaking these values is crucial for feel:
 
 *   **Aerodynamics:**
     *   `Quadratic Drag Coefficient`: Controls air resistance based on speed squared. (Try `0.0001` for subtle drag, `0.001` for heavy arrows).
-    *   `Fletching Rotation Speed`: Degrees per second the arrow spins. (Try `360.0`).
+    *   `Fletching Rotation Speed`: Degrees per second the arrow spins. (Try `360.0`). *Optimization Note: The component automatically finds and spins the first Mesh component it sees.*
     *   `Wind Vector`: Global wind force applied to the arrow.
 
 *   **Impact:**
-    *   `Ricochet Max Angle`: Impacts shallower than this angle will bounce. (e.g., `70` allows glancing hits).
+    *   `Ricochet Max Angle`: Impacts shallower than this angle will bounce. (e.g., `70` allows glancing hits). Use `Enable Bounce` to toggle.
     *   `Penetration Depth`: How deep the arrow sticks into the target (in units).
+    *   **Hit Stop:** Toggle `Enable Hit Stop` to freeze the game for a split second (e.g., `0.05s`) on impact for that "Crunch" feel.
 
 *   **Archer's Paradox (Wiggle):**
     *   Arrows naturally oscillate when fired. The component calculates this but **you must visualize it**.

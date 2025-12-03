@@ -2,6 +2,9 @@
 #include "GameFramework/Actor.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/ShapeComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 {
@@ -20,10 +23,37 @@ URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 	PenetrationDepth = 15.0f;
 
 	bShouldBounce = true; // We handle the decision in HandleImpact
+	bEnableBounce = true;
 	Bounciness = 0.3f;
 	Friction = 0.5f;
 
+	// Hit Stop
+	bEnableHitStop = true;
+	HitStopDuration = 0.05f;
+
 	TimeAlive = 0.0f;
+}
+
+void URealisticArrowMovementComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Cache the mesh for spinning
+	AActor* Owner = GetOwner();
+	if (Owner)
+	{
+		TArray<UPrimitiveComponent*> Comps;
+		Owner->GetComponents(Comps);
+		for (UPrimitiveComponent* Comp : Comps)
+		{
+			// Find first visual mesh that isn't the root/collider
+			if (Comp != UpdatedComponent && !Comp->IsA<UShapeComponent>())
+			{
+				CachedMeshToSpin = Comp;
+				break;
+			}
+		}
+	}
 }
 
 void URealisticArrowMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -33,28 +63,9 @@ void URealisticArrowMovementComponent::TickComponent(float DeltaTime, enum ELeve
 	if (Velocity.SizeSquared() > 1.0f)
 	{
 		// --- Fletching Rotation (Spin) ---
-		// Since bRotationFollowsVelocity locks the root rotation, we can't easily roll the root.
-		// However, for visual effect, we should ideally rotate the mesh.
-		// A simple hack for single-mesh actors is to apply local roll to the Root if RotationFollowsVelocity allows,
-		// but since it overwrites, we must rely on the user rotating the mesh in material or a child component.
-
-		// Correction: We can accumulate Roll in a variable and apply it *on top* of the Velocity rotation if we override UpdateRotation,
-		// but that's complex. For this plugin, let's try to find a MeshComponent and spin that.
-		AActor* Owner = GetOwner();
-		if (Owner)
+		if (CachedMeshToSpin.IsValid())
 		{
-			// Find the first mesh (that isn't the root, or if it is the root, we can't spin it easily with FollowVelocity on).
-			// If the user setup is Root(Scene) -> Mesh, we can spin the Mesh.
-			TArray<UPrimitiveComponent*> Comps;
-			Owner->GetComponents(Comps);
-			for (UPrimitiveComponent* Comp : Comps)
-			{
-				if (Comp != UpdatedComponent && !Comp->IsA<UShapeComponent>()) // Avoid spinning the collision capsule
-				{
-					Comp->AddLocalRotation(FRotator(0.0f, 0.0f, FletchingRotationSpeed * DeltaTime));
-					break; // Spin the first visual mesh we find
-				}
-			}
+			CachedMeshToSpin->AddLocalRotation(FRotator(0.0f, 0.0f, FletchingRotationSpeed * DeltaTime));
 		}
 	}
 
@@ -108,7 +119,7 @@ void URealisticArrowMovementComponent::HandleImpact(const FHitResult& Hit, float
 
 	bool bIsGlancing = ImpactAngleDeg > RicochetMaxAngle;
 
-	if (bIsGlancing && bShouldBounce)
+	if (bIsGlancing && bShouldBounce && bEnableBounce)
 	{
 		// Standard bounce
 		Super::HandleImpact(Hit, TimeSlice, MoveDelta);
@@ -125,6 +136,11 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 	// Cache direction before stopping (Velocity becomes zero)
 	FVector ForwardDir = Velocity.GetSafeNormal();
 	if (ForwardDir.IsZero()) ForwardDir = GetOwner()->GetActorForwardVector();
+
+	if (bEnableHitStop)
+	{
+		PerformHitStop();
+	}
 
 	StopMovementImmediately();
 
@@ -148,4 +164,28 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 		UpdatedComponent->SetWorldLocation(StickLocation);
 		UpdatedComponent->AttachToComponent(HitComp, FAttachmentTransformRules::KeepWorldTransform, Hit.BoneName);
 	}
+}
+
+void URealisticArrowMovementComponent::PerformHitStop()
+{
+	// Cache current dilation (in case kill cam is active)
+	PreHitStopTimeDilation = UGameplayStatics::GetGlobalTimeDilation(this);
+
+	// Set to extremely low (nearly stopped)
+	float HitStopScale = 0.001f;
+	UGameplayStatics::SetGlobalTimeDilation(this, HitStopScale);
+
+	// Timer needs to account for dilation.
+	// Dilation = 0.001.
+	// If we want 0.05 real seconds, the game time that passes is 0.05 * 0.001.
+	float Delay = HitStopDuration * HitStopScale;
+	if (Delay < 0.0001f) Delay = 0.0001f; // Minimum tick
+
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
+}
+
+void URealisticArrowMovementComponent::StopHitStop()
+{
+	// Restore
+	UGameplayStatics::SetGlobalTimeDilation(this, PreHitStopTimeDilation);
 }

@@ -35,6 +35,8 @@ ABaseKillCamArrow::ABaseKillCamArrow()
 	// Defaults
 	FramingMode = EKillCamFramingMode::StandardRear;
 	KillCamFOV = 90.0f;
+	bEnableCameraCollision = true;
+	CameraProbeSize = 12.0f;
 }
 
 void ABaseKillCamArrow::OnConstruction(const FTransform& Transform)
@@ -62,6 +64,10 @@ void ABaseKillCamArrow::ApplyFramingPreset()
 	if (!CameraBoom || !FollowCamera) return;
 
 	FollowCamera->SetFieldOfView(KillCamFOV);
+
+	// Apply Collision Settings
+	CameraBoom->bDoCollisionTest = bEnableCameraCollision;
+	CameraBoom->ProbeSize = CameraProbeSize;
 
 	switch (FramingMode)
 	{

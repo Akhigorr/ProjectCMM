@@ -43,6 +43,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Framing")
 	float KillCamFOV;
 
+	// --- Collision / Obstacle Avoidance ---
+
+	/** If true, the camera will pull in closer to avoid clipping through walls. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Framing")
+	bool bEnableCameraCollision;
+
+	/** Size of the probe (sphere) used for camera collision. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Framing")
+	float CameraProbeSize;
+
 	/** Helper to apply the chosen framing mode to the spring arm/camera. */
 	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Framing")
 	void ApplyFramingPreset();
