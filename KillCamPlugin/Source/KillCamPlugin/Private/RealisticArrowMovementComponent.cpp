@@ -147,8 +147,11 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 	// Disable further physics/collision
 	if (UpdatedComponent)
 	{
-		UpdatedComponent->SetSimulatePhysics(false);
-		UpdatedComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(UpdatedComponent))
+		{
+			Primitive->SetSimulatePhysics(false);
+			Primitive->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
 	}
 
 	// Penetration: Move forward slightly
