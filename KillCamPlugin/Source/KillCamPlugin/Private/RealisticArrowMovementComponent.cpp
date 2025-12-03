@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "KillCamWorldSubsystem.h"
 
 URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 {
@@ -90,22 +91,76 @@ void URealisticArrowMovementComponent::TickComponent(float DeltaTime, enum ELeve
 
 FVector URealisticArrowMovementComponent::ComputeAcceleration(const FVector& InVelocity, float DeltaTime) const
 {
-	FVector Acceleration = Super::ComputeAcceleration(InVelocity, DeltaTime);
+	// Calculate Gravity Scale (Local * Global)
+	float FinalGravity = ProjectileGravityScale;
+	float FinalDrag = QuadraticDragCoefficient;
+	FVector FinalWind = WindVector;
+
+	if (const UWorld* World = GetWorld())
+	{
+		if (const UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			FinalGravity *= Subsystem->GetGlobalGravityScalar();
+			FinalDrag *= Subsystem->GetGlobalDragModifier();
+			FinalWind += Subsystem->GetGlobalWind();
+		}
+	}
+
+	// We can't easily modify 'Super' gravity calculation inside ComputeAcceleration cleanly
+	// without re-implementing it or modifying member variable.
+	// Since ComputeAcceleration is const, we cannot modify ProjectileGravityScale here.
+	// However, Super::ComputeAcceleration uses ProjectileGravityScale.
+	// Workaround: We add the Extra Gravity ourselves if it's different from 1.0,
+	// OR we modify the member variable in Tick. Modifying in Tick is safer for the base class logic.
+
+	// Let's rely on TickComponent to sync the Global Gravity Scalar to the member variable?
+	// No, 'const' function.
+
+	// Standard Projectile Acceleration = (Gravity + ExternalForces)
+	// We will calculate our own terms.
+
+	FVector Acceleration = FVector::ZeroVector;
+
+	// 1. Re-implement Gravity since we can't affect Super's read of GravityScale in this const func easily
+	// actually Super::ComputeAcceleration does: Acceleration.Z += GetGravityZ() * ProjectileGravityScale;
+	// So we call Super, then Add/Subtract the difference?
+	// Or better: Let's just calculate Drag and Wind here, and handle Gravity in Tick or just add "Extra" gravity here.
+
+	Acceleration = Super::ComputeAcceleration(InVelocity, DeltaTime);
+
+	// If GlobalGravity != 1.0, apply the difference
+	// Current Gravity applied by Super is (GravityZ * LocalScale).
+	// We want (GravityZ * LocalScale * GlobalScale).
+	// Added Gravity = (GravityZ * LocalScale * GlobalScale) - (GravityZ * LocalScale)
+	//               = (GravityZ * LocalScale) * (GlobalScale - 1.0)
+	if (World)
+	{
+		float GlobalGrav = 1.0f;
+		if (const UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			GlobalGrav = Subsystem->GetGlobalGravityScalar();
+		}
+
+		if (!FMath::IsNearlyEqual(GlobalGrav, 1.0f))
+		{
+			float GravityZ = GetGravityZ();
+			Acceleration.Z += (GravityZ * ProjectileGravityScale) * (GlobalGrav - 1.0f);
+		}
+	}
 
 	// --- Quadratic Drag ---
 	// Force = -C * v^2 * direction
-	if (QuadraticDragCoefficient > 0.0f && !InVelocity.IsZero())
+	if (FinalDrag > 0.0f && !InVelocity.IsZero())
 	{
 		float SpeedSq = InVelocity.SizeSquared();
-		FVector DragForce = -InVelocity.GetSafeNormal() * (QuadraticDragCoefficient * SpeedSq);
+		FVector DragForce = -InVelocity.GetSafeNormal() * (FinalDrag * SpeedSq);
 		Acceleration += DragForce;
 	}
 
 	// --- Wind ---
-	// Apply constant wind acceleration
-	if (!WindVector.IsZero())
+	if (!FinalWind.IsZero())
 	{
-		Acceleration += WindVector;
+		Acceleration += FinalWind;
 	}
 
 	return Acceleration;

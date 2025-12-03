@@ -8,9 +8,13 @@ This document provides a detailed reference for all Classes, Components, Structs
     *   [URealisticArrowMovementComponent](#urealisticarrowmovementcomponent)
 2. [Actors](#actors)
     *   [ABaseKillCamArrow](#abasekillcamarrow)
-3. [Structs](#structs)
+    *   [AArrowEnvironmentManager](#aarrowenvironmentmanager)
+3. [Subsystems](#subsystems)
+    *   [UKillCamWorldSubsystem](#ukillcamworldsubsystem)
+4. [Structs](#structs)
     *   [FArrowBallisticStats](#farrowballisticstats)
-4. [Enums](#enums)
+    *   [FArrowEnvironmentStats](#farrowenvironmentstats)
+5. [Enums](#enums)
 
 ---
 
@@ -131,6 +135,27 @@ A "batteries-included" actor that assembles the components and provides camera f
 | :--- | :--- |
 | `void ApplyFramingPreset()` | Re-applies the SpringArm settings based on the selected `FramingMode`. Called automatically on Construction/BeginPlay. |
 
+### AArrowEnvironmentManager
+Place this actor in your level to configure global arrow physics.
+
+#### Properties (Category: Arrow Environment)
+| Type | Name | Description |
+| :--- | :--- | :--- |
+| `FArrowEnvironmentStats` | **EnvironmentStats** | Settings (Wind, Gravity, Drag) applied to the world on BeginPlay. |
+
+---
+
+## Subsystems
+
+### UKillCamWorldSubsystem
+A World Subsystem that holds the current level's global physics modifiers.
+
+#### Functions
+| Function | Description |
+| :--- | :--- |
+| `SetEnvironmentStats(FArrowEnvironmentStats)` | Updates the global settings. |
+| `GetGlobalWind()`, etc. | Getters for components to read. |
+
 ---
 
 ## Structs
@@ -145,6 +170,15 @@ A data structure for easily passing around arrow configurations (e.g., from a Da
 | `float` | **FletchingRotationSpeed** | `360.0` |
 | `float` | **PenetrationDepth** | `15.0` |
 | `bool` | **bEnableBounce** | `true` |
+
+### FArrowEnvironmentStats
+Global settings for the world.
+
+| Type | Name | Default |
+| :--- | :--- | :--- |
+| `FVector` | **GlobalWind** | `(0,0,0)` |
+| `float` | **GlobalGravityScalar** | `1.0` |
+| `float` | **GlobalDragModifier** | `1.0` |
 
 ---
 

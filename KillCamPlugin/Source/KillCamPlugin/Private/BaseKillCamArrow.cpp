@@ -3,14 +3,17 @@
 #include "RealisticArrowMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/SphereComponent.h"
 
 ABaseKillCamArrow::ABaseKillCamArrow()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Create root component (assuming it's usually a collision comp or mesh, but we use a scene root for the base)
-	// Users inheriting this will likely attach their mesh to the RootComponent.
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+	// Use a SphereComponent as root so projectile movement can sweep for collisions.
+	USphereComponent* CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
+	CollisionComp->InitSphereRadius(5.0f);
+	CollisionComp->SetCollisionProfileName("Projectile");
+	RootComponent = CollisionComp;
 
 	// Create Movement Component
 	ArrowMovementComponent = CreateDefaultSubobject<URealisticArrowMovementComponent>(TEXT("ArrowMovementComponent"));
