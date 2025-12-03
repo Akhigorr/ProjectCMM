@@ -5,6 +5,7 @@
 #include "BaseKillCamArrow.generated.h"
 
 class UKillCamComponent;
+class URealisticArrowMovementComponent;
 class USpringArmComponent;
 class UCameraComponent;
 
@@ -23,6 +24,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	// --- Components ---
+
+	/** Realistic Movement Component (Physics, Drag, Ricochet) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Kill Cam|Physics")
+	TObjectPtr<URealisticArrowMovementComponent> ArrowMovementComponent;
 
 	/** The core Kill Cam logic component */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Kill Cam")

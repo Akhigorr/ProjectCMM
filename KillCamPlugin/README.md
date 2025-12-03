@@ -40,6 +40,28 @@ Select the `KillCam` component to tweak these settings:
 *   **Target Time Dilation:** How slow time should get (e.g., `0.1` for 10% speed).
 *   **Prediction Radius:** How wide the "hit box" for the camera trigger is.
 
+### Realistic Physics Configuration
+
+The `URealisticArrowMovementComponent` provides AAA flight mechanics. Tweaking these values is crucial for feel:
+
+*   **Aerodynamics:**
+    *   `Quadratic Drag Coefficient`: Controls air resistance based on speed squared. (Try `0.0001` for subtle drag, `0.001` for heavy arrows).
+    *   `Fletching Rotation Speed`: Degrees per second the arrow spins. (Try `360.0`).
+    *   `Wind Vector`: Global wind force applied to the arrow.
+
+*   **Impact:**
+    *   `Ricochet Max Angle`: Impacts shallower than this angle will bounce. (e.g., `70` allows glancing hits).
+    *   `Penetration Depth`: How deep the arrow sticks into the target (in units).
+
+*   **Archer's Paradox (Wiggle):**
+    *   Arrows naturally oscillate when fired. The component calculates this but **you must visualize it**.
+    *   Use the `CurrentOscillationValue` property in Blueprint to drive a Material Parameter (World Position Offset).
+    *   **Blueprint Setup:**
+        1. In `Tick`, Get `ArrowMovementComponent`.
+        2. Read `CurrentOscillationValue`.
+        3. Set Scalar Parameter Value on your Arrow Mesh's Dynamic Material Instance.
+        4. In Material: Use `World Position Offset` to bend the mesh Left/Right based on this scalar.
+
 ### Post-Process & Effects
 Bind to the `OnKillCamUpdate` event in your Blueprint to drive visual effects:
 

@@ -1,5 +1,6 @@
 #include "BaseKillCamArrow.h"
 #include "KillCamComponent.h"
+#include "RealisticArrowMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 
@@ -10,6 +11,10 @@ ABaseKillCamArrow::ABaseKillCamArrow()
 	// Create root component (assuming it's usually a collision comp or mesh, but we use a scene root for the base)
 	// Users inheriting this will likely attach their mesh to the RootComponent.
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+
+	// Create Movement Component
+	ArrowMovementComponent = CreateDefaultSubobject<URealisticArrowMovementComponent>(TEXT("ArrowMovementComponent"));
+	ArrowMovementComponent->UpdatedComponent = RootComponent;
 
 	// Create Kill Cam Component
 	KillCamComponent = CreateDefaultSubobject<UKillCamComponent>(TEXT("KillCamComponent"));
