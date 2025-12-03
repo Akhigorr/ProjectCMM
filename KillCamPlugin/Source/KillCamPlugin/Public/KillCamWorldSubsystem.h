@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Sound/SoundMix.h"
+#include "Sound/SoundClass.h"
 #include "KillCamWorldSubsystem.generated.h"
 
 /**
@@ -55,6 +57,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arrow Environment")
 	float GetGlobalDragModifier() const { return CurrentStats.GlobalDragModifier; }
 
+	// --- Audio Management ---
+
+	/** Sets the sound mix to use during Kill Cam (e.g., to mute background noise). */
+	UFUNCTION(BlueprintCallable, Category = "Arrow Environment|Audio")
+	void SetAudioSettings(USoundMix* Mix, USoundClass* Class);
+
+	/** Activates the specialized audio mix for slow motion. */
+	void EnterKillCamAudioState();
+
+	/** Clears the specialized audio mix. */
+	void ExitKillCamAudioState();
+
 private:
 	FArrowEnvironmentStats CurrentStats;
+
+	TObjectPtr<USoundMix> CachedSoundMix;
+	TObjectPtr<USoundClass> CachedSoundClass;
 };

@@ -154,6 +154,7 @@ A World Subsystem that holds the current level's global physics modifiers.
 | Function | Description |
 | :--- | :--- |
 | `SetEnvironmentStats(FArrowEnvironmentStats)` | Updates the global settings. |
+| `SetAudioSettings(USoundMix*, USoundClass*)` | Updates the global audio overrides. |
 | `GetGlobalWind()`, etc. | Getters for components to read. |
 
 ---

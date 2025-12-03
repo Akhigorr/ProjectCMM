@@ -5,6 +5,9 @@
 #include "KillCamWorldSubsystem.h"
 #include "ArrowEnvironmentManager.generated.h"
 
+class USoundMix;
+class USoundClass;
+
 /**
  * Place this actor in your level to configure global arrow physics (Wind, Gravity, etc).
  */
@@ -23,5 +26,13 @@ public:
 	/** The environment settings to apply to the World Subsystem on BeginPlay. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Environment")
 	FArrowEnvironmentStats EnvironmentStats;
+
+	/** Optional Sound Mix to push when Kill Cam triggers (e.g. muffle ambient noise). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Environment|Audio")
+	TObjectPtr<USoundMix> KillCamSoundMix;
+
+	/** Optional Sound Class for specific overrides (optional, depends on SoundMix). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Environment|Audio")
+	TObjectPtr<USoundClass> KillCamSoundClass;
 
 };

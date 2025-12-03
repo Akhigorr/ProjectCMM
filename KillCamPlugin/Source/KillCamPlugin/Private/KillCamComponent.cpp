@@ -202,6 +202,15 @@ void UKillCamComponent::StartKillCam()
 		}
 	}
 
+	// Audio Start
+	if (GetWorld())
+	{
+		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			Subsystem->EnterKillCamAudioState();
+		}
+	}
+
 	OnKillCamStart.Broadcast();
 }
 
@@ -211,6 +220,15 @@ void UKillCamComponent::StopKillCam()
 
 	bIsKillCamActive = false;
 	UGameplayStatics::SetGlobalTimeDilation(this, 1.0f);
+
+	// Audio Stop
+	if (GetWorld())
+	{
+		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			Subsystem->ExitKillCamAudioState();
+		}
+	}
 
 	if (bAutoSwitchView)
 	{

@@ -20,6 +20,7 @@ void AArrowEnvironmentManager::BeginPlay()
 		if (Subsystem)
 		{
 			Subsystem->SetEnvironmentStats(EnvironmentStats);
+			Subsystem->SetAudioSettings(KillCamSoundMix, KillCamSoundClass);
 		}
 	}
 }
