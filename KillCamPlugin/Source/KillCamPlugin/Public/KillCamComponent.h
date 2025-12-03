@@ -72,6 +72,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Prediction")
 	float PredictionRadius;
 
+	/** Debug: If true, TriggerLookAhead will always succeed (force start) without hitting anything. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Debug")
+	bool bDebugForceAlwaysTrigger;
+
 	// --- Camera Control ---
 
 	/** If true, the plugin will automatically take control of the Player Camera. */

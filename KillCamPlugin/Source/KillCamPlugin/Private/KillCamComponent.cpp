@@ -101,6 +101,12 @@ void UKillCamComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 
 bool UKillCamComponent::TriggerLookAhead()
 {
+	if (bDebugForceAlwaysTrigger)
+	{
+		StartKillCam();
+		return true;
+	}
+
 	FHitResult Hit;
 	bool bHit = PerformPrediction(Hit);
 

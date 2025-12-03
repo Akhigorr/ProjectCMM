@@ -39,6 +39,7 @@ Select the `KillCam` component to tweak these settings:
 *   **Target Tag:** The Actor Tag (e.g., "Enemy") that triggers the camera.
 *   **Target Time Dilation:** How slow time should get (e.g., `0.1` for 10% speed).
 *   **Prediction Radius:** How wide the "hit box" for the camera trigger is.
+*   **Debug Force Always Trigger:** Check this to force the Kill Cam to activate immediately (bypass prediction) for testing.
 
 ### Camera Control & Framing
 
@@ -72,6 +73,9 @@ The `URealisticArrowMovementComponent` provides AAA flight mechanics. Tweaking t
     *   `Ricochet Max Angle`: Impacts shallower than this angle will bounce. (e.g., `70` allows glancing hits). Use `Enable Bounce` to toggle.
     *   `Penetration Depth`: How deep the arrow sticks into the target (in units).
     *   **Hit Stop:** Toggle `Enable Hit Stop` to freeze the game for a split second (e.g., `0.05s`) on impact for that "Crunch" feel.
+
+**Easy Stats Configuration:**
+You can use the `ApplyBallisticStats` function to set multiple properties at once using the `FArrowBallisticStats` struct. This is useful for creating Data Tables of different arrow types (e.g., Light, Heavy, Magic).
 
 *   **Archer's Paradox (Wiggle):**
     *   Arrows naturally oscillate when fired. The component calculates this but **you must visualize it**.

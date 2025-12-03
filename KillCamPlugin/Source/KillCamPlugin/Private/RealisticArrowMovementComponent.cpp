@@ -34,6 +34,15 @@ URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 	TimeAlive = 0.0f;
 }
 
+void URealisticArrowMovementComponent::ApplyBallisticStats(const FArrowBallisticStats& Stats)
+{
+	QuadraticDragCoefficient = Stats.QuadraticDragCoefficient;
+	ProjectileGravityScale = Stats.GravityScale;
+	FletchingRotationSpeed = Stats.FletchingRotationSpeed;
+	PenetrationDepth = Stats.PenetrationDepth;
+	bEnableBounce = Stats.bEnableBounce;
+}
+
 void URealisticArrowMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
