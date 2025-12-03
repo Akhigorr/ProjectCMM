@@ -198,6 +198,11 @@ void URealisticArrowMovementComponent::PerformHitStop()
 
 void URealisticArrowMovementComponent::StopHitStop()
 {
-	// Restore
-	UGameplayStatics::SetGlobalTimeDilation(this, PreHitStopTimeDilation);
+	// Only restore if the current dilation is still our HitStop value (0.001f).
+	// If it changed (e.g., KillCam ended and set it to 1.0f), we respect that change.
+	float CurrentDilation = UGameplayStatics::GetGlobalTimeDilation(this);
+	if (FMath::IsNearlyEqual(CurrentDilation, 0.001f, 0.0001f))
+	{
+		UGameplayStatics::SetGlobalTimeDilation(this, PreHitStopTimeDilation);
+	}
 }

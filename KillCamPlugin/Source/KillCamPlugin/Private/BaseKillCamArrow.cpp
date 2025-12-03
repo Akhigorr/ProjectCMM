@@ -51,6 +51,19 @@ void ABaseKillCamArrow::BeginPlay()
 
 	ApplyFramingPreset();
 
+	// Collision Safety: Ignore the owner (Instigator) so we don't hit ourselves immediately
+	if (GetOwner())
+	{
+		// MoveIgnoreActor adds the owner to the IgnoreActors list for all primitive components
+		MoveIgnoreActor(GetOwner());
+
+		// Explicitly ensure the movement component knows (if it has specific ignore logic)
+		if (KillCamComponent)
+		{
+			// Note: KillCamComponent uses OwnerActor for prediction, which is already GetOwner()
+		}
+	}
+
 	// Ensure the lag speed matches the component config if desired,
 	// or let the component drive it in Tick if dynamic updates are needed.
 	if (KillCamComponent && CameraBoom)
