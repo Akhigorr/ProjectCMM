@@ -5,6 +5,7 @@
 #include "Curves/CurveFloat.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "KillCamPlugin.h" // For Logging
 
 UKillCamComponent::UKillCamComponent()
 {
@@ -25,6 +26,9 @@ UKillCamComponent::UKillCamComponent()
 	PostImpactDelay = 2.0f;
 	BlendToCamTime = 0.5f;
 	BlendBackTime = 0.5f;
+
+	// Debug
+	bDebugForceAlwaysTrigger = false;
 }
 
 void UKillCamComponent::BeginPlay()
@@ -103,6 +107,7 @@ bool UKillCamComponent::TriggerLookAhead()
 {
 	if (bDebugForceAlwaysTrigger)
 	{
+		UE_LOG(LogKillCam, Warning, TEXT("KillCam: Debug Force Triggered for %s"), *GetName());
 		StartKillCam();
 		return true;
 	}
@@ -112,9 +117,11 @@ bool UKillCamComponent::TriggerLookAhead()
 
 	if (bHit)
 	{
+		AActor* HitActor = Hit.GetActor();
 		// If we found a target with the tag
-		if (Hit.GetActor() && Hit.GetActor()->ActorHasTag(TargetTag))
+		if (HitActor && HitActor->ActorHasTag(TargetTag))
 		{
+			UE_LOG(LogKillCam, Log, TEXT("KillCam: Target Identified [%s]. Starting Sequence."), *HitActor->GetName());
 			StartKillCam();
 			return true;
 		}
@@ -187,6 +194,8 @@ void UKillCamComponent::StartKillCam()
 {
 	if (bIsKillCamActive) return;
 
+	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence STARTED. Dilation: %f"), TargetTimeDilation);
+
 	bIsKillCamActive = true;
 	UGameplayStatics::SetGlobalTimeDilation(this, TargetTimeDilation);
 
@@ -217,6 +226,8 @@ void UKillCamComponent::StartKillCam()
 void UKillCamComponent::StopKillCam()
 {
 	if (!bIsKillCamActive) return;
+
+	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence ENDED. Restoring state."));
 
 	bIsKillCamActive = false;
 	UGameplayStatics::SetGlobalTimeDilation(this, 1.0f);

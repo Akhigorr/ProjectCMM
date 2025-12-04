@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "KillCamWorldSubsystem.h"
+#include "KillCamPlugin.h"
 
 URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 {
@@ -185,11 +186,13 @@ void URealisticArrowMovementComponent::HandleImpact(const FHitResult& Hit, float
 
 	if (bIsGlancing && bShouldBounce && bEnableBounce)
 	{
+		UE_LOG(LogKillCam, Verbose, TEXT("Arrow Physics: Ricochet off %s (Angle: %f)"), *Hit.GetActor()->GetName(), ImpactAngleDeg);
 		// Standard bounce
 		Super::HandleImpact(Hit, TimeSlice, MoveDelta);
 	}
 	else
 	{
+		UE_LOG(LogKillCam, Verbose, TEXT("Arrow Physics: Stick into %s (Angle: %f)"), *Hit.GetActor()->GetName(), ImpactAngleDeg);
 		// Stick!
 		StickToTarget(Hit);
 	}
