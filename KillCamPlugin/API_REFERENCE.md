@@ -49,6 +49,7 @@ The core logic component responsible for handling the camera transition, slow mo
 | Type | Name | Description |
 | :--- | :--- | :--- |
 | `bool` | **bDebugForceAlwaysTrigger** | If true, `TriggerLookAhead` always succeeds. Useful for testing camera flow without enemies. |
+| `bool` | **bDrawDebugPrediction** | If true, draws debug lines/spheres showing the path being checked for targets. |
 
 #### Properties (Category: Kill Cam | Camera Control)
 | Type | Name | Description |
@@ -99,6 +100,11 @@ An advanced projectile physics engine that replaces standard movement to add AAA
 | `bool` | **bEnableBounce** | If false, arrows always stick (ignoring Ricochet angle). |
 | `bool` | **bEnableHitStop** | If true, freezes the game for a split second on impact ("Crunch" feel). |
 | `float` | **HitStopDuration** | Duration of the hit stop freeze (real-time seconds). |
+
+#### Events
+| Event Name | Signature | Description |
+| :--- | :--- | :--- |
+| **OnArrowImpact** | `(FHitResult Hit, bool bIsRicochet)` | Fired on every impact. |
 
 #### Properties (Category: Arrow Physics | Oscillation)
 | Type | Name | Description |

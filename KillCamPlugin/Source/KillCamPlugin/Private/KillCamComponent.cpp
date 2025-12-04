@@ -5,6 +5,7 @@
 #include "Curves/CurveFloat.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "DrawDebugHelpers.h"
 #include "KillCamPlugin.h" // For Logging
 
 UKillCamComponent::UKillCamComponent()
@@ -29,6 +30,7 @@ UKillCamComponent::UKillCamComponent()
 
 	// Debug
 	bDebugForceAlwaysTrigger = false;
+	bDrawDebugPrediction = false;
 }
 
 void UKillCamComponent::BeginPlay()
@@ -150,6 +152,8 @@ bool UKillCamComponent::PerformPrediction(FHitResult& OutHit)
 		TArray<AActor*> ActorsToIgnore;
 		ActorsToIgnore.Add(OwnerActor.Get());
 
+		EDrawDebugTrace::Type DebugType = bDrawDebugPrediction ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+
 		return UKismetSystemLibrary::SphereTraceSingle(
 			this,
 			Start,
@@ -158,7 +162,7 @@ bool UKillCamComponent::PerformPrediction(FHitResult& OutHit)
 			UEngineTypes::ConvertToTraceType(ECC_Visibility),
 			false,
 			ActorsToIgnore,
-			EDrawDebugTrace::None,
+			DebugType,
 			OutHit,
 			true
 		);
@@ -174,6 +178,8 @@ bool UKillCamComponent::PerformPrediction(FHitResult& OutHit)
 		PathParams.bTraceWithChannel = true;
 		PathParams.TraceChannel = ECC_Visibility;
 		PathParams.ActorsToIgnore.Add(OwnerActor.Get());
+		PathParams.DrawDebugType = bDrawDebugPrediction ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+		PathParams.DrawDebugTime = 1.0f;
 
 		// Typically we might want to check against specific object types, but channel is generic enough
 

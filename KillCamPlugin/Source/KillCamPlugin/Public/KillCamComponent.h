@@ -76,6 +76,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Debug")
 	bool bDebugForceAlwaysTrigger;
 
+	/** Debug: If true, draws debug lines/spheres for the Look Ahead prediction. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Debug")
+	bool bDrawDebugPrediction;
+
 	// --- Camera Control ---
 
 	/** If true, the plugin will automatically take control of the Player Camera. */

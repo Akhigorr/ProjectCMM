@@ -187,12 +187,14 @@ void URealisticArrowMovementComponent::HandleImpact(const FHitResult& Hit, float
 	if (bIsGlancing && bShouldBounce && bEnableBounce)
 	{
 		UE_LOG(LogKillCam, Verbose, TEXT("Arrow Physics: Ricochet off %s (Angle: %f)"), *Hit.GetActor()->GetName(), ImpactAngleDeg);
+		OnArrowImpact.Broadcast(Hit, true);
 		// Standard bounce
 		Super::HandleImpact(Hit, TimeSlice, MoveDelta);
 	}
 	else
 	{
 		UE_LOG(LogKillCam, Verbose, TEXT("Arrow Physics: Stick into %s (Angle: %f)"), *Hit.GetActor()->GetName(), ImpactAngleDeg);
+		OnArrowImpact.Broadcast(Hit, false);
 		// Stick!
 		StickToTarget(Hit);
 	}

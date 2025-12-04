@@ -4,6 +4,8 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "RealisticArrowMovementComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnArrowImpact, const FHitResult&, Hit, bool, bIsRicochet);
+
 /**
  * Struct to bundle arrow physics settings for easy configuration.
  */
@@ -112,6 +114,10 @@ public:
 	/** Duration of the hit stop in real-time seconds (e.g., 0.05). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Physics|Impact")
 	float HitStopDuration;
+
+	/** Fired when the arrow hits something (either ricochet or stick). */
+	UPROPERTY(BlueprintAssignable, Category = "Arrow Physics|Events")
+	FOnArrowImpact OnArrowImpact;
 
 protected:
 	virtual void BeginPlay() override;
