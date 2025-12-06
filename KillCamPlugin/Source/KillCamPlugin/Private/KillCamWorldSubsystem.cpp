@@ -35,15 +35,17 @@ void UKillCamWorldSubsystem::ResetScore()
 	OnScoreChanged.Broadcast(TotalScore, 0);
 }
 
-void UKillCamWorldSubsystem::RequestTimeDilation(FName Reason, float DilationValue)
+void UKillCamWorldSubsystem::RequestTimeDilation(const UObject* Requester, float DilationValue)
 {
-	TimeDilationRequests.FindOrAdd(Reason) = DilationValue;
+	if (!Requester) return;
+	TimeDilationRequests.Add(Requester, DilationValue);
 	UpdateGlobalTimeDilation();
 }
 
-void UKillCamWorldSubsystem::ClearTimeDilationRequest(FName Reason)
+void UKillCamWorldSubsystem::ClearTimeDilationRequest(const UObject* Requester)
 {
-	TimeDilationRequests.Remove(Reason);
+	if (!Requester) return;
+	TimeDilationRequests.Remove(Requester);
 	UpdateGlobalTimeDilation();
 }
 
@@ -55,16 +57,36 @@ void UKillCamWorldSubsystem::UpdateGlobalTimeDilation()
 
 	if (TimeDilationRequests.Num() > 0)
 	{
-		// Find lowest value
-		float Lowest = 100.0f; // Arbitrary high start
-		for (const auto& Pair : TimeDilationRequests)
+		// Filter out stale keys
+		TArray<TWeakObjectPtr<const UObject>> StaleKeys;
+		float Lowest = 100.0f;
+
+		for (auto It = TimeDilationRequests.CreateIterator(); It; ++It)
 		{
-			if (Pair.Value < Lowest)
+			if (It.Key().IsValid())
 			{
-				Lowest = Pair.Value;
+				if (It.Value() < Lowest)
+				{
+					Lowest = It.Value();
+				}
+			}
+			else
+			{
+				StaleKeys.Add(It.Key());
 			}
 		}
-		TargetDilation = Lowest;
+
+		// Cleanup Stale Keys
+		for (const auto& Key : StaleKeys)
+		{
+			TimeDilationRequests.Remove(Key);
+		}
+
+		// Re-evaluate if we just removed everything
+		if (TimeDilationRequests.Num() > 0)
+		{
+			TargetDilation = Lowest;
+		}
 	}
 
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), TargetDilation);
@@ -88,6 +110,9 @@ void UKillCamWorldSubsystem::RegisterKillCamStop()
 	{
 		ExitKillCamAudioState();
 	}
+
+	// Force an update to clean up any stale keys from destroyed actors
+	UpdateGlobalTimeDilation();
 }
 
 void UKillCamWorldSubsystem::SetAudioSettings(USoundMix* Mix, USoundClass* Class)

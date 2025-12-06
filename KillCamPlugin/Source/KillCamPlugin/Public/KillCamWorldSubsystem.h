@@ -75,13 +75,16 @@ public:
 
 	// --- Time Dilation Management ---
 
-	/** Requests a specific time dilation value. Lowest value wins across all requests. */
+	/**
+	 * Requests a specific time dilation value. Lowest value wins.
+	 * Using Object Requester ensures requests are auto-cleared if the object is destroyed/unloaded.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Time")
-	void RequestTimeDilation(FName Reason, float DilationValue);
+	void RequestTimeDilation(const UObject* Requester, float DilationValue);
 
-	/** Removes a time dilation request. */
+	/** Removes a time dilation request for this object. */
 	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Time")
-	void ClearTimeDilationRequest(FName Reason);
+	void ClearTimeDilationRequest(const UObject* Requester);
 
 	/** Gets the current active kill cam count. */
 	UFUNCTION(BlueprintPure, Category = "Kill Cam")
@@ -109,7 +112,8 @@ private:
 	int32 TotalScore = 0;
 
 	// Time Dilation
-	TMap<FName, float> TimeDilationRequests;
+	// We use TWeakObjectPtr to detect stale objects (unloaded levels/destroyed actors)
+	TMap<TWeakObjectPtr<const UObject>, float> TimeDilationRequests;
 	void UpdateGlobalTimeDilation();
 
 	// Kill Cam Tracking

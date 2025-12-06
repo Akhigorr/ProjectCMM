@@ -234,9 +234,8 @@ void UKillCamComponent::StartKillCam()
 	{
 		CachedSubsystem->RegisterKillCamStart();
 
-		// Use Unique Key to prevent conflict with other arrows
-		TimeDilationKey = FName(*(OwnerActor->GetName() + TEXT("_KillCam")));
-		CachedSubsystem->RequestTimeDilation(TimeDilationKey, TargetTimeDilation);
+		// Use Owner as Requester for streaming safety
+		CachedSubsystem->RequestTimeDilation(OwnerActor.Get(), TargetTimeDilation);
 	}
 
 	if (bAutoSwitchView && OwnerActor.IsValid())
@@ -265,8 +264,11 @@ void UKillCamComponent::StopKillCam()
 	if (CachedSubsystem.IsValid())
 	{
 		CachedSubsystem->RegisterKillCamStop();
-		// Use the cached key to safely remove the request even if owner is invalid
-		CachedSubsystem->ClearTimeDilationRequest(TimeDilationKey);
+		// Clear request using Owner (or if owner is dead, it will be cleaned up by Subsystem automatically)
+		if (OwnerActor.IsValid())
+		{
+			CachedSubsystem->ClearTimeDilationRequest(OwnerActor.Get());
+		}
 	}
 
 	if (bAutoSwitchView)

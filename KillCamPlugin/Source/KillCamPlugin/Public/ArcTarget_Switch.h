@@ -16,7 +16,7 @@ public:
 	AArcTarget_Switch();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arc Target|Switch")
-	TObjectPtr<AArcTarget> LinkedTarget;
+	TWeakObjectPtr<AArcTarget> LinkedTarget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arc Target|Switch")
 	float RevealDuration;

@@ -143,9 +143,6 @@ private:
 	/** Cached Subsystem */
 	TWeakObjectPtr<UKillCamWorldSubsystem> CachedSubsystem;
 
-	/** Unique Key for Time Dilation */
-	FName TimeDilationKey;
-
 	/** The view target we had before switching */
 	TWeakObjectPtr<AActor> OriginalViewTarget;
 
