@@ -4,10 +4,11 @@ A high-performance, single-player Kill Cam system for Unreal Engine 5.5+, design
 
 ## Features
 
+*   **Archer Component:** Easy-to-use component for firing arrows with correct ownership and velocity setup.
 *   **Dual Modes:**
     *   **Realtime Follow:** Camera rides the projectile immediately.
     *   **Predictive Trigger:** Camera only engages if a hit is predicted (via physics simulation or tracing).
-*   **Predictive Look-Ahead:** Uses `PredictProjectilePath` (Physics) or Sphere Tracing to detect targets before impact.
+*   **Predictive Look-Ahead:** Uses accurate physics simulation (Gravity, Drag, Wind) to detect targets before impact.
 *   **Dynamic Time Dilation:** Smooth slow-motion effects when the kill cam engages.
 *   **Post-Process Hooks:** Exposes real-time data (`DistanceToTarget`, `SpeedRatio`) to Blueprints for driving materials, vignettes, or chromatic aberration.
 *   **Zero-Setup Actor:** Includes `ABaseKillCamArrow` with pre-configured Spring Arm and Camera components.
@@ -20,15 +21,13 @@ A high-performance, single-player Kill Cam system for Unreal Engine 5.5+, design
 
 ## Usage
 
-### Method 1: Using the Base Class
-1.  Create a new Blueprint inheriting from `ABaseKillCamArrow`.
-2.  Add your projectile mesh (e.g., Arrow Mesh) to the component hierarchy.
-3.  Adjust the **SpringArm** and **Camera** settings in the Details panel to get your desired shot framing.
+### Method 1: Using the Archer Component (Recommended)
+1.  Add `ArcherComponent` to your Character.
+2.  Call `FireArrow` function from Blueprint.
 
-### Method 2: Adding to Existing Actors
-1.  Add the `KillCam` component to your existing Projectile Actor.
-2.  Ensure your actor has a `SpringArm` and `Camera` component if you want the "Ride along" effect.
-3.  (Optional) Call `KillCamComponent->TriggerLookAhead()` manually in your Blueprint (e.g., just after firing).
+### Method 2: Manual Spawning
+1.  Spawn `ABaseKillCamArrow` manually.
+2.  Set Owner and Velocity.
 
 ### Configuration
 
