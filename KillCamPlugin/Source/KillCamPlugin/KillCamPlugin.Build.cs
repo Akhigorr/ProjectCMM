@@ -24,6 +24,9 @@ public class KillCamPlugin : ModuleRules
 			new string[]
 			{
 				"Core",
+				"GeometryCollectionEngine",
+				"ChaosSolverEngine",
+				"PhysicsCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
