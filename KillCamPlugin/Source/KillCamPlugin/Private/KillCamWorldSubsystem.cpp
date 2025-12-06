@@ -5,6 +5,8 @@ void UKillCamWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	ResetEnvironmentStats();
+	ActiveKillCamCount = 0;
+	TimeDilationRequests.Empty();
 }
 
 void UKillCamWorldSubsystem::SetEnvironmentStats(const FArrowEnvironmentStats& NewStats)
@@ -20,6 +22,61 @@ void UKillCamWorldSubsystem::ResetEnvironmentStats()
 	CurrentStats.GlobalWind = FVector::ZeroVector;
 }
 
+void UKillCamWorldSubsystem::RequestTimeDilation(FName Reason, float DilationValue)
+{
+	TimeDilationRequests.FindOrAdd(Reason) = DilationValue;
+	UpdateGlobalTimeDilation();
+}
+
+void UKillCamWorldSubsystem::ClearTimeDilationRequest(FName Reason)
+{
+	TimeDilationRequests.Remove(Reason);
+	UpdateGlobalTimeDilation();
+}
+
+void UKillCamWorldSubsystem::UpdateGlobalTimeDilation()
+{
+	if (!GetWorld()) return;
+
+	float TargetDilation = 1.0f;
+
+	if (TimeDilationRequests.Num() > 0)
+	{
+		// Find lowest value
+		float Lowest = 100.0f; // Arbitrary high start
+		for (const auto& Pair : TimeDilationRequests)
+		{
+			if (Pair.Value < Lowest)
+			{
+				Lowest = Pair.Value;
+			}
+		}
+		TargetDilation = Lowest;
+	}
+
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), TargetDilation);
+}
+
+void UKillCamWorldSubsystem::RegisterKillCamStart()
+{
+	ActiveKillCamCount++;
+	if (ActiveKillCamCount == 1)
+	{
+		EnterKillCamAudioState();
+	}
+}
+
+void UKillCamWorldSubsystem::RegisterKillCamStop()
+{
+	ActiveKillCamCount--;
+	if (ActiveKillCamCount < 0) ActiveKillCamCount = 0;
+
+	if (ActiveKillCamCount == 0)
+	{
+		ExitKillCamAudioState();
+	}
+}
+
 void UKillCamWorldSubsystem::SetAudioSettings(USoundMix* Mix, USoundClass* Class)
 {
 	CachedSoundMix = Mix;
@@ -32,9 +89,6 @@ void UKillCamWorldSubsystem::EnterKillCamAudioState()
 	{
 		UGameplayStatics::PushSoundMixModifier(GetWorld(), CachedSoundMix);
 	}
-
-	// If the user provided a sound class, we might want to duck everything else?
-	// Usually SoundMix handles the ducking rules internally, so pushing it is enough.
 }
 
 void UKillCamWorldSubsystem::ExitKillCamAudioState()

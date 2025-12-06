@@ -53,6 +53,21 @@ void AArcTarget::Shatter()
 	if (GeometryCollection)
 	{
 		GeometryCollection->SetSimulatePhysics(true);
+
+		// Change collision profile to prevent debris blocking new arrows
+		GeometryCollection->SetCollisionProfileName("Destructible");
+
+		// Apply impulse to make it look like an explosion/shatter
+		// Default values, can be exposed if needed
+		float ImpulseStrength = 500.0f;
+		float ImpulseRadius = 100.0f;
+
+		// We use the center of the actor or hit point if we had it.
+		// Since Shatter() has no args here, we assume center.
+		// Ideally HandleHit passes impact point, but Shatter is simple here.
+		FVector Center = GetActorLocation();
+
+		GeometryCollection->AddRadialImpulse(Center, ImpulseRadius, ImpulseStrength, ERadialImpulseFalloff::RIF_Linear, true);
 	}
 
 	// Disable detection collision so we can't hit it again

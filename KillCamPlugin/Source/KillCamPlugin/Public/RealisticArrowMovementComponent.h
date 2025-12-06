@@ -2,33 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "KillCamTypes.h"
 #include "RealisticArrowMovementComponent.generated.h"
 
+class UKillCamWorldSubsystem;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnArrowImpact, const FHitResult&, Hit, bool, bIsRicochet);
-
-/**
- * Struct to bundle arrow physics settings for easy configuration.
- */
-USTRUCT(BlueprintType)
-struct FArrowBallisticStats
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float QuadraticDragCoefficient = 0.0001f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float GravityScale = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float FletchingRotationSpeed = 360.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float PenetrationDepth = 15.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	bool bEnableBounce = true;
-};
 
 /**
  * AAA Realistic Arrow Physics: Variable Drag, Wind, Spin, Oscillation, and Smart Ricochet.
@@ -44,6 +23,9 @@ public:
 	/** Apply a bundle of stats at once (useful for switching arrow types) */
 	UFUNCTION(BlueprintCallable, Category = "Arrow Physics")
 	void ApplyBallisticStats(const FArrowBallisticStats& Stats);
+
+	/** Helper to build current stats struct */
+	FArrowBallisticStats GetCurrentBallisticStats() const;
 
 protected:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -129,8 +111,8 @@ private:
 	/** Cached mesh for spinning */
 	TWeakObjectPtr<UPrimitiveComponent> CachedMeshToSpin;
 
-	/** Stored time dilation to restore after hit stop */
-	float PreHitStopTimeDilation;
+	/** Cached Subsystem to avoid lookups */
+	TWeakObjectPtr<UKillCamWorldSubsystem> CachedSubsystem;
 
 	/** Helper to handle sticking logic */
 	void StickToTarget(const FHitResult& Hit);
@@ -141,5 +123,8 @@ private:
 	/** End the hit stop effect */
 	void StopHitStop();
 
-	FTimerHandle TimerHandle_HitStop;
+	/** Helper for Next Tick hit stop */
+	void OnHitStopNextTick();
+
+	float RemainingHitStopDuration;
 };
