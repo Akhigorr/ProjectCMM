@@ -197,9 +197,11 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 void URealisticArrowMovementComponent::PerformHitStop()
 {
 	// 1. Request Time Dilation via Subsystem (0.001f is hard limit)
-	if (CachedSubsystem.IsValid())
+	if (CachedSubsystem.IsValid() && GetOwner())
 	{
-		CachedSubsystem->RequestTimeDilation("HitStop", 0.001f);
+		// Use Unique Key
+		FName Key = FName(*(GetOwner()->GetName() + TEXT("_HitStop")));
+		CachedSubsystem->RequestTimeDilation(Key, 0.001f);
 	}
 
 	// 2. Set Timer for Next Tick loop to count down real-time
@@ -248,8 +250,10 @@ void URealisticArrowMovementComponent::OnHitStopNextTick()
 
 void URealisticArrowMovementComponent::StopHitStop()
 {
-	if (CachedSubsystem.IsValid())
+	if (CachedSubsystem.IsValid() && GetOwner())
 	{
-		CachedSubsystem->ClearTimeDilationRequest("HitStop");
+		// Use Unique Key
+		FName Key = FName(*(GetOwner()->GetName() + TEXT("_HitStop")));
+		CachedSubsystem->ClearTimeDilationRequest(Key);
 	}
 }

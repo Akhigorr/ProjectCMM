@@ -114,6 +114,9 @@ private:
 	/** Cached Subsystem to avoid lookups */
 	TWeakObjectPtr<UKillCamWorldSubsystem> CachedSubsystem;
 
+	/** Unique Key for Hit Stop */
+	FName HitStopKey;
+
 	/** Helper to handle sticking logic */
 	void StickToTarget(const FHitResult& Hit);
 
