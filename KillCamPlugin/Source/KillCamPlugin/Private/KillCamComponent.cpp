@@ -180,8 +180,8 @@ bool UKillCamComponent::PerformPrediction(FHitResult& OutHit)
 	{
 		// Custom Physics Prediction via KillCamStatics
 		FArrowBallisticStats Stats;
-		// Try to get stats from movement component
-		if (URealisticArrowMovementComponent* MoveComp = OwnerActor->FindComponentByClass<URealisticArrowMovementComponent>())
+		// Try to get stats from movement component (Safe Access)
+		if (URealisticArrowMovementComponent* MoveComp = Cast<URealisticArrowMovementComponent>(OwnerActor.Get()->GetComponentByClass(URealisticArrowMovementComponent::StaticClass())))
 		{
 			Stats = MoveComp->GetCurrentBallisticStats();
 		}
@@ -230,12 +230,12 @@ void UKillCamComponent::StartKillCam()
 	bIsKillCamActive = true;
 
 	// Use Subsystem
-	if (CachedSubsystem.IsValid() && OwnerActor.IsValid())
+	if (CachedSubsystem.IsValid())
 	{
 		CachedSubsystem->RegisterKillCamStart();
 
-		// Use Owner as Requester for streaming safety
-		CachedSubsystem->RequestTimeDilation(OwnerActor.Get(), TargetTimeDilation);
+		// Use 'this' (the component) as unique requester to support multiple arrows
+		CachedSubsystem->RequestTimeDilation(this, TargetTimeDilation);
 	}
 
 	if (bAutoSwitchView && OwnerActor.IsValid())
@@ -264,11 +264,8 @@ void UKillCamComponent::StopKillCam()
 	if (CachedSubsystem.IsValid())
 	{
 		CachedSubsystem->RegisterKillCamStop();
-		// Clear request using Owner (or if owner is dead, it will be cleaned up by Subsystem automatically)
-		if (OwnerActor.IsValid())
-		{
-			CachedSubsystem->ClearTimeDilationRequest(OwnerActor.Get());
-		}
+		// Use 'this' to clear the request
+		CachedSubsystem->ClearTimeDilationRequest(this);
 	}
 
 	if (bAutoSwitchView)
