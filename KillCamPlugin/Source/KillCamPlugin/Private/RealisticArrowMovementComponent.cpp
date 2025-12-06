@@ -34,6 +34,16 @@ URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 	HitStopDuration = 0.05f;
 
 	TimeAlive = 0.0f;
+	InitialPreset = EArrowPreset::Standard;
+	bApplyPresetOnBeginPlay = false;
+}
+
+void URealisticArrowMovementComponent::OnRegister()
+{
+	Super::OnRegister();
+
+	// Apply preset if requested (allowing editor tweaks to override if needed later in BeginPlay, but Register is good for defaults)
+	// Actually, BeginPlay is safer for "Game Start" logic vs Editor logic.
 }
 
 void URealisticArrowMovementComponent::ApplyBallisticStats(const FArrowBallisticStats& Stats)
@@ -47,6 +57,11 @@ void URealisticArrowMovementComponent::ApplyBallisticStats(const FArrowBallistic
 
 void URealisticArrowMovementComponent::BeginPlay()
 {
+	if (bApplyPresetOnBeginPlay)
+	{
+		ApplyBallisticStats(UKillCamStatics::GetArrowPreset(InitialPreset));
+	}
+
 	Super::BeginPlay();
 
 	// Cache the mesh for spinning
@@ -125,11 +140,18 @@ FVector URealisticArrowMovementComponent::ComputeAcceleration(const FVector& InV
 		if (!FMath::IsNearlyEqual(GlobalGrav, 1.0f))
 		{
 			// Explicitly calculate the difference to ensure Total = Gravity * Scale * Global
-			float BaseGravityZ = GetGravityZ() * ProjectileGravityScale;
-			float TargetGravityZ = BaseGravityZ * GlobalGrav;
+			// Super::ComputeAcceleration uses GetGravityZ() * ProjectileGravityScale.
+			// GetGravityZ() returns the World Gravity (unscaled).
+			// Acceleration.Z from Super is (GravityZ * Scale).
+			// We want (GravityZ * Scale * Global).
 
-			// We add the difference because Super already added BaseGravityZ
-			Acceleration.Z += (TargetGravityZ - BaseGravityZ);
+			// So we need to add: (GravityZ * Scale * Global) - (GravityZ * Scale)
+			// = (GravityZ * Scale) * (Global - 1.0)
+
+			float BaseGravityZ = GetGravityZ(); // This IS raw World Gravity
+			float GravityDelta = (BaseGravityZ * ProjectileGravityScale) * (GlobalGrav - 1.0f);
+
+			Acceleration.Z += GravityDelta;
 		}
 	}
 
