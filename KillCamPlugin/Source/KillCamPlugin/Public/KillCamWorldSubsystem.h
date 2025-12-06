@@ -57,6 +57,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arrow Environment")
 	float GetGlobalDragModifier() const { return CurrentStats.GlobalDragModifier; }
 
+	UFUNCTION(BlueprintPure, Category = "Kill Cam State")
+	int32 GetActiveKillCamCount() const { return ActiveKillCamCount; }
+
 	// --- Audio Management ---
 
 	/** Sets the sound mix to use during Kill Cam (e.g., to mute background noise). */
@@ -64,14 +67,17 @@ public:
 	void SetAudioSettings(USoundMix* Mix, USoundClass* Class);
 
 	/** Activates the specialized audio mix for slow motion. */
-	void EnterKillCamAudioState();
+	void RegisterKillCamStart(float TargetTimeDilation);
 
 	/** Clears the specialized audio mix. */
-	void ExitKillCamAudioState();
+	void RegisterKillCamStop();
 
 private:
 	FArrowEnvironmentStats CurrentStats;
 
 	TObjectPtr<USoundMix> CachedSoundMix;
 	TObjectPtr<USoundClass> CachedSoundClass;
+
+	/** Number of active kill cams. */
+	int32 ActiveKillCamCount;
 };

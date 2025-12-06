@@ -7,6 +7,8 @@
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
 #include "KillCamPlugin.h" // For Logging
+#include "KillCamWorldSubsystem.h"
+#include "RealisticArrowMovementComponent.h"
 
 UKillCamComponent::UKillCamComponent()
 {
@@ -169,27 +171,87 @@ bool UKillCamComponent::PerformPrediction(FHitResult& OutHit)
 	}
 	else if (LookAheadMethod == ELookAheadMethod::Physics)
 	{
-		FPredictProjectilePathParams PathParams;
-		PathParams.StartLocation = Start;
-		PathParams.LaunchVelocity = Velocity;
-		PathParams.bTraceWithCollision = true;
-		PathParams.ProjectileRadius = PredictionRadius;
-		PathParams.MaxSimTime = 2.0f; // Simulate up to 2 seconds ahead
-		PathParams.bTraceWithChannel = true;
-		PathParams.TraceChannel = ECC_Visibility;
-		PathParams.ActorsToIgnore.Add(OwnerActor.Get());
-		PathParams.DrawDebugType = bDrawDebugPrediction ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
-		PathParams.DrawDebugTime = 1.0f;
+		// Detailed custom prediction to match RealisticArrowMovementComponent
+		const float SimTimeMax = 2.0f;
+		const float SimStep = 0.033f; // ~30fps simulation
 
-		// Typically we might want to check against specific object types, but channel is generic enough
+		FVector CurrentPos = Start;
+		FVector CurrentVel = Velocity;
 
-		FPredictProjectilePathResult PathResult;
-		bool bSuccess = UGameplayStatics::PredictProjectilePath(this, PathParams, PathResult);
+		// Fetch Physics Params
+		float GravityZ = GetWorld()->GetGravityZ();
+		float ProjectileGravityScale = 1.0f;
+		float DragCoeff = 0.0f;
+		FVector Wind = FVector::ZeroVector;
 
-		if (PathResult.HitResult.bBlockingHit)
+		if (OwnerActor.IsValid())
 		{
-			OutHit = PathResult.HitResult;
-			return true;
+			if (URealisticArrowMovementComponent* MoveComp = OwnerActor->FindComponentByClass<URealisticArrowMovementComponent>())
+			{
+				ProjectileGravityScale = MoveComp->ProjectileGravityScale;
+				DragCoeff = MoveComp->QuadraticDragCoefficient;
+				Wind = MoveComp->WindVector;
+			}
+		}
+
+		// Apply Global Subsystem Modifiers
+		if (const UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			float GlobalGrav = Subsystem->GetGlobalGravityScalar();
+			float GlobalDrag = Subsystem->GetGlobalDragModifier();
+
+			// Adjust effective gravity (Logic matches MovementComponent: Scale * GlobalScale)
+			// Wait, MovementComponent Logic: Acceleration.Z += (GravityZ * Scale) * (Global - 1)
+			// Effectively: TotalGravity = GravityZ * Scale * Global
+			GravityZ *= (ProjectileGravityScale * GlobalGrav);
+			DragCoeff *= GlobalDrag;
+			Wind += Subsystem->GetGlobalWind();
+		}
+		else
+		{
+			GravityZ *= ProjectileGravityScale;
+		}
+
+		// Simulation Loop
+		for (float t = 0; t < SimTimeMax; t += SimStep)
+		{
+			FVector Acceleration = FVector(0, 0, GravityZ);
+
+			// Drag: -C * v^2 * dir
+			if (DragCoeff > 0.0f && !CurrentVel.IsZero())
+			{
+				float SpeedSq = CurrentVel.SizeSquared();
+				Acceleration -= CurrentVel.GetSafeNormal() * (DragCoeff * SpeedSq);
+			}
+
+			// Wind
+			Acceleration += Wind;
+
+			// Integrate
+			FVector NextPos = CurrentPos + (CurrentVel * SimStep) + (0.5f * Acceleration * SimStep * SimStep);
+			FVector NewVel = CurrentVel + (Acceleration * SimStep);
+
+			// Sweep
+			FCollisionQueryParams QueryParams;
+			QueryParams.AddIgnoredActor(OwnerActor.Get());
+
+			if (GetWorld()->SweepSingleByChannel(OutHit, CurrentPos, NextPos, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(PredictionRadius), QueryParams))
+			{
+				if (bDrawDebugPrediction)
+				{
+					DrawDebugLine(GetWorld(), CurrentPos, OutHit.Location, FColor::Red, false, 1.0f);
+					DrawDebugSphere(GetWorld(), OutHit.Location, PredictionRadius, 8, FColor::Red, false, 1.0f);
+				}
+				return true;
+			}
+
+			if (bDrawDebugPrediction)
+			{
+				DrawDebugLine(GetWorld(), CurrentPos, NextPos, FColor::Green, false, 1.0f);
+			}
+
+			CurrentPos = NextPos;
+			CurrentVel = NewVel;
 		}
 	}
 
@@ -203,7 +265,15 @@ void UKillCamComponent::StartKillCam()
 	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence STARTED. Dilation: %f"), TargetTimeDilation);
 
 	bIsKillCamActive = true;
-	UGameplayStatics::SetGlobalTimeDilation(this, TargetTimeDilation);
+
+	// Delegate Global State to Subsystem
+	if (GetWorld())
+	{
+		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			Subsystem->RegisterKillCamStart(TargetTimeDilation);
+		}
+	}
 
 	if (bAutoSwitchView && OwnerActor.IsValid())
 	{
@@ -217,15 +287,6 @@ void UKillCamComponent::StartKillCam()
 		}
 	}
 
-	// Audio Start
-	if (GetWorld())
-	{
-		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
-		{
-			Subsystem->EnterKillCamAudioState();
-		}
-	}
-
 	OnKillCamStart.Broadcast();
 }
 
@@ -236,29 +297,44 @@ void UKillCamComponent::StopKillCam()
 	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence ENDED. Restoring state."));
 
 	bIsKillCamActive = false;
-	UGameplayStatics::SetGlobalTimeDilation(this, 1.0f);
 
-	// Audio Stop
+	// Delegate Global State to Subsystem
 	if (GetWorld())
 	{
 		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
 		{
-			Subsystem->ExitKillCamAudioState();
+			Subsystem->RegisterKillCamStop();
 		}
 	}
 
 	if (bAutoSwitchView)
 	{
-		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
-		if (PC && OriginalViewTarget.IsValid())
+		// Only restore camera if no other Kill Cam is active
+		bool bShouldRestoreCamera = true;
+		if (GetWorld())
 		{
-			// Return control
-			PC->SetViewTargetWithBlend(OriginalViewTarget.Get(), BlendBackTime, VTBlend_EaseInOut, 1.0f);
+			if (const UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
+			{
+				if (Subsystem->GetActiveKillCamCount() > 0)
+				{
+					bShouldRestoreCamera = false;
+				}
+			}
 		}
-		else if (PC && PC->GetPawn())
+
+		if (bShouldRestoreCamera)
 		{
-			// Fallback to pawn
-			PC->SetViewTargetWithBlend(PC->GetPawn(), BlendBackTime, VTBlend_EaseInOut, 1.0f);
+			APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+			if (PC && OriginalViewTarget.IsValid())
+			{
+				// Return control
+				PC->SetViewTargetWithBlend(OriginalViewTarget.Get(), BlendBackTime, VTBlend_EaseInOut, 1.0f);
+			}
+			else if (PC && PC->GetPawn())
+			{
+				// Fallback to pawn
+				PC->SetViewTargetWithBlend(PC->GetPawn(), BlendBackTime, VTBlend_EaseInOut, 1.0f);
+			}
 		}
 	}
 

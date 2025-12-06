@@ -114,10 +114,4 @@ void ABaseKillCamArrow::ApplyFramingPreset()
 void ABaseKillCamArrow::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	// Dynamic updates if properties change at runtime (allows tweaking in Editor)
-	if (KillCamComponent && CameraBoom)
-	{
-		CameraBoom->CameraLagSpeed = KillCamComponent->CameraLagSpeed;
-	}
 }

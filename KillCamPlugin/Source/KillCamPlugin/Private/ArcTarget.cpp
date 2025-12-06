@@ -53,6 +53,15 @@ void AArcTarget::Shatter()
 	if (GeometryCollection)
 	{
 		GeometryCollection->SetSimulatePhysics(true);
+
+		// Ensure chunks don't instantly block the arrow that is "sticking" to them
+		// Setting to OverlapAll lets visual chunks exist but not block physics immediately
+		// Or strictly, we want them to fall but not reject the arrow.
+		// However, Chaos often resets collision on fracture.
+		// We set to "Destructible" or custom profile, but for now "BlockAll" might be too harsh.
+		// Let's ensure the arrow's movement channel is ignored or just rely on physics layers.
+		// Use "Destructible" profile which is standard for debris, usually ignoring Pawn/Camera but blocking WorldStatic.
+		GeometryCollection->SetCollisionProfileName(TEXT("Destructible"));
 	}
 
 	// Disable detection collision so we can't hit it again

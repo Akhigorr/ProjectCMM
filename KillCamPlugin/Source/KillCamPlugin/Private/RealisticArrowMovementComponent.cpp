@@ -108,33 +108,12 @@ FVector URealisticArrowMovementComponent::ComputeAcceleration(const FVector& InV
 		}
 	}
 
-	// We can't easily modify 'Super' gravity calculation inside ComputeAcceleration cleanly
-	// without re-implementing it or modifying member variable.
-	// Since ComputeAcceleration is const, we cannot modify ProjectileGravityScale here.
-	// However, Super::ComputeAcceleration uses ProjectileGravityScale.
-	// Workaround: We add the Extra Gravity ourselves if it's different from 1.0,
-	// OR we modify the member variable in Tick. Modifying in Tick is safer for the base class logic.
-
-	// Let's rely on TickComponent to sync the Global Gravity Scalar to the member variable?
-	// No, 'const' function.
-
-	// Standard Projectile Acceleration = (Gravity + ExternalForces)
-	// We will calculate our own terms.
-
 	FVector Acceleration = FVector::ZeroVector;
 
-	// 1. Re-implement Gravity since we can't affect Super's read of GravityScale in this const func easily
-	// actually Super::ComputeAcceleration does: Acceleration.Z += GetGravityZ() * ProjectileGravityScale;
-	// So we call Super, then Add/Subtract the difference?
-	// Or better: Let's just calculate Drag and Wind here, and handle Gravity in Tick or just add "Extra" gravity here.
-
+	// Super implementation calculates: Acceleration.Z = GetGravityZ() * ProjectileGravityScale;
 	Acceleration = Super::ComputeAcceleration(InVelocity, DeltaTime);
 
-	// If GlobalGravity != 1.0, apply the difference
-	// Current Gravity applied by Super is (GravityZ * LocalScale).
-	// We want (GravityZ * LocalScale * GlobalScale).
-	// Added Gravity = (GravityZ * LocalScale * GlobalScale) - (GravityZ * LocalScale)
-	//               = (GravityZ * LocalScale) * (GlobalScale - 1.0)
+	// Apply Global Gravity Scalar from Subsystem
 	if (World)
 	{
 		float GlobalGrav = 1.0f;
@@ -145,8 +124,12 @@ FVector URealisticArrowMovementComponent::ComputeAcceleration(const FVector& InV
 
 		if (!FMath::IsNearlyEqual(GlobalGrav, 1.0f))
 		{
-			float GravityZ = GetGravityZ();
-			Acceleration.Z += (GravityZ * ProjectileGravityScale) * (GlobalGrav - 1.0f);
+			// Explicitly calculate the difference to ensure Total = Gravity * Scale * Global
+			float BaseGravityZ = GetGravityZ() * ProjectileGravityScale;
+			float TargetGravityZ = BaseGravityZ * GlobalGrav;
+
+			// We add the difference because Super already added BaseGravityZ
+			Acceleration.Z += (TargetGravityZ - BaseGravityZ);
 		}
 	}
 
@@ -252,9 +235,17 @@ void URealisticArrowMovementComponent::PerformHitStop()
 	// Dilation = 0.001.
 	// If we want 0.05 real seconds, the game time that passes is 0.05 * 0.001.
 	float Delay = HitStopDuration * HitStopScale;
-	if (Delay < 0.0001f) Delay = 0.0001f; // Minimum tick
 
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
+	// Remove arbitrary clamp to 0.0001f which can cause frame-rate issues
+	// TimerManager handles small delays by firing next tick if it's too small
+	if (Delay <= KINDA_SMALL_NUMBER)
+	{
+		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &URealisticArrowMovementComponent::StopHitStop);
+	}
+	else
+	{
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
+	}
 }
 
 void URealisticArrowMovementComponent::StopHitStop()
