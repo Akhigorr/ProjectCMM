@@ -1,5 +1,7 @@
 #include "ArcTarget_Mimic.h"
 #include "Components/SphereComponent.h"
+#include "RealisticArrowMovementComponent.h"
+#include "BaseKillCamArrow.h"
 
 AArcTarget_Mimic::AArcTarget_Mimic()
 {
@@ -15,9 +17,13 @@ AArcTarget_Mimic::AArcTarget_Mimic()
 
 void AArcTarget_Mimic::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// Assuming incoming projectiles have "Projectile" tag or similar logic.
-	// For generic plugin, we check if it moves fast or has a movement component.
-	if (OtherActor && OtherActor != this)
+	if (!OtherActor || OtherActor == this) return;
+
+	// Only dodge valid projectiles
+	bool bIsProjectile = OtherActor->FindComponentByClass<URealisticArrowMovementComponent>() != nullptr ||
+						 OtherActor->IsA<ABaseKillCamArrow>();
+
+	if (bIsProjectile)
 	{
 		FVector DirectionToProjectile = (OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 

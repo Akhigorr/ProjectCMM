@@ -153,6 +153,20 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 		PerformHitStop();
 	}
 
+	// Apply Damage to the target so it can react (e.g. AArcTarget::Shatter)
+	if (Hit.GetActor())
+	{
+		UGameplayStatics::ApplyPointDamage(
+			Hit.GetActor(),
+			100.0f, // Base Damage
+			ForwardDir,
+			Hit,
+			GetOwner()->GetInstigatorController(),
+			GetOwner(),
+			nullptr // DamageType class
+		);
+	}
+
 	StopMovementImmediately();
 
 	// Disable further physics/collision

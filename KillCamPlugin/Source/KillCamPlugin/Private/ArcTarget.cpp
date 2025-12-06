@@ -2,6 +2,7 @@
 #include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/DamageEvents.h"
 #include "KillCamPlugin.h"
 
 AArcTarget::AArcTarget()
@@ -31,11 +32,36 @@ void AArcTarget::BeginPlay()
 	Super::BeginPlay();
 }
 
+float AArcTarget::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (bIsShattered) return 0.0f;
+
+	// Extract Hit Info if available
+	FVector ImpactPoint = GetActorLocation();
+	FVector ImpactNormal = FVector::UpVector;
+
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* PointDamageEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
+		ImpactPoint = PointDamageEvent->HitInfo.ImpactPoint;
+		ImpactNormal = PointDamageEvent->HitInfo.ImpactNormal;
+	}
+
+	// For now, assume generic hits are not ricochets if they deal damage
+	HandleHit(ImpactPoint, ImpactNormal, false);
+
+	return ActualDamage;
+}
+
 void AArcTarget::HandleHit(FVector ImpactPoint, FVector ImpactNormal, bool bIsRicochet)
 {
 	if (bIsShattered) return;
 
-	Health -= 100.0f;
+	Health -= 100.0f; // Assuming 1 hit kill or using DamageAmount passed via HandleHit?
+	// Original code hardcoded -100.0f. We keep it consistent.
+	// Improvements could involve passing damage amount to HandleHit.
 
 	if (Health <= 0.0f)
 	{
@@ -62,9 +88,6 @@ void AArcTarget::Shatter()
 		float ImpulseStrength = 500.0f;
 		float ImpulseRadius = 100.0f;
 
-		// We use the center of the actor or hit point if we had it.
-		// Since Shatter() has no args here, we assume center.
-		// Ideally HandleHit passes impact point, but Shatter is simple here.
 		FVector Center = GetActorLocation();
 
 		GeometryCollection->AddRadialImpulse(Center, ImpulseRadius, ImpulseStrength, ERadialImpulseFalloff::RIF_Linear, true);
