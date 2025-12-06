@@ -97,7 +97,8 @@ FVector URealisticArrowMovementComponent::ComputeAcceleration(const FVector& InV
 	float FinalDrag = QuadraticDragCoefficient;
 	FVector FinalWind = WindVector;
 
-	if (const UWorld* World = GetWorld())
+	const UWorld* World = GetWorld();
+	if (World)
 	{
 		if (const UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
 		{
