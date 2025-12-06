@@ -26,7 +26,8 @@ public class KillCamPlugin : ModuleRules
 				"Core",
 				"GeometryCollectionEngine",
 				"ChaosSolverEngine",
-				"PhysicsCore"
+				"PhysicsCore",
+				"Chaos"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -39,7 +40,8 @@ public class KillCamPlugin : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"PhysicsCore"
+				"PhysicsCore",
+				"Chaos"
 				// ... add private dependencies that you statically link with here ...
 			}
 			);
