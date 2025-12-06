@@ -22,7 +22,10 @@ void AArcTarget_Nest::OnChildDestroyed(AArcTarget* DestroyedTarget)
 	if (DestroyedTarget == ChildTarget)
 	{
 		UE_LOG(LogKillCam, Log, TEXT("Nest: Child destroyed. Respawning in %f seconds."), RegenTime);
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle_Respawn, this, &AArcTarget_Nest::RespawnChild, RegenTime, false);
+		if (GetWorld())
+		{
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle_Respawn, this, &AArcTarget_Nest::RespawnChild, RegenTime, false);
+		}
 	}
 }
 
