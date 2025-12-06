@@ -6,6 +6,7 @@ void UKillCamWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	ResetEnvironmentStats();
 	ActiveKillCamCount = 0;
+	TotalScore = 0;
 	TimeDilationRequests.Empty();
 }
 
@@ -20,6 +21,18 @@ void UKillCamWorldSubsystem::ResetEnvironmentStats()
 	CurrentStats.GlobalGravityScalar = 1.0f;
 	CurrentStats.GlobalDragModifier = 1.0f;
 	CurrentStats.GlobalWind = FVector::ZeroVector;
+}
+
+void UKillCamWorldSubsystem::AddScore(int32 Amount)
+{
+	TotalScore += Amount;
+	OnScoreChanged.Broadcast(TotalScore, Amount);
+}
+
+void UKillCamWorldSubsystem::ResetScore()
+{
+	TotalScore = 0;
+	OnScoreChanged.Broadcast(TotalScore, 0);
 }
 
 void UKillCamWorldSubsystem::RequestTimeDilation(FName Reason, float DilationValue)

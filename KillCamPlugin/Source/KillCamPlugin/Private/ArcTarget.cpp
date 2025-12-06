@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/DamageEvents.h"
 #include "KillCamPlugin.h"
+#include "KillCamWorldSubsystem.h"
 
 AArcTarget::AArcTarget()
 {
@@ -97,6 +98,15 @@ void AArcTarget::Shatter()
 	if (HitCollision)
 	{
 		HitCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	// Add Score
+	if (GetWorld())
+	{
+		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			Subsystem->AddScore(ScoreValue);
+		}
 	}
 
 	OnTargetDestroyed.Broadcast(this);

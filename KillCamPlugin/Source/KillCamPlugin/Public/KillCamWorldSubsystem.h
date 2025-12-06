@@ -6,6 +6,8 @@
 #include "Sound/SoundClass.h"
 #include "KillCamWorldSubsystem.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnScoreChanged, int32, NewTotalScore, int32, PointsAdded);
+
 /**
  * Struct defining global environmental factors for arrows in this world.
  */
@@ -57,6 +59,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arrow Environment")
 	float GetGlobalDragModifier() const { return CurrentStats.GlobalDragModifier; }
 
+	// --- Score Management ---
+
+	UPROPERTY(BlueprintAssignable, Category = "Kill Cam|Score")
+	FOnScoreChanged OnScoreChanged;
+
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Score")
+	void AddScore(int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Score")
+	void ResetScore();
+
+	UFUNCTION(BlueprintPure, Category = "Kill Cam|Score")
+	int32 GetTotalScore() const { return TotalScore; }
+
 	// --- Time Dilation Management ---
 
 	/** Requests a specific time dilation value. Lowest value wins across all requests. */
@@ -88,6 +104,9 @@ private:
 
 	TObjectPtr<USoundMix> CachedSoundMix;
 	TObjectPtr<USoundClass> CachedSoundClass;
+
+	// Score
+	int32 TotalScore = 0;
 
 	// Time Dilation
 	TMap<FName, float> TimeDilationRequests;
