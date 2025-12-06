@@ -24,6 +24,9 @@ AArcTarget::AArcTarget()
 	Health = 100.0f;
 	ScoreValue = 10;
 	bIsShattered = false;
+
+	ExplosionImpulseStrength = 20000.0f; // Strong enough to scatter
+	ExplosionRadius = 150.0f;
 }
 
 void AArcTarget::BeginPlay()
@@ -39,11 +42,12 @@ void AArcTarget::HandleHit(FVector ImpactPoint, FVector ImpactNormal, bool bIsRi
 
 	if (Health <= 0.0f)
 	{
-		Shatter();
+		// Pass impact direction (inverse of normal)
+		Shatter(ImpactPoint, -ImpactNormal);
 	}
 }
 
-void AArcTarget::Shatter()
+void AArcTarget::Shatter(FVector ImpactPoint, FVector ImpactDirection)
 {
 	if (bIsShattered) return;
 
@@ -62,6 +66,16 @@ void AArcTarget::Shatter()
 		// Let's ensure the arrow's movement channel is ignored or just rely on physics layers.
 		// Use "Destructible" profile which is standard for debris, usually ignoring Pawn/Camera but blocking WorldStatic.
 		GeometryCollection->SetCollisionProfileName(TEXT("Destructible"));
+
+		// Apply Radial Impulse if force is configured
+		if (ExplosionImpulseStrength > 0.0f)
+		{
+			FVector Origin = ImpactPoint;
+			if (Origin.IsZero()) Origin = GetActorLocation();
+
+			// Apply radial impulse to all chunks
+			GeometryCollection->AddRadialImpulse(Origin, ExplosionRadius, ExplosionImpulseStrength, ERadialImpulseFalloff::RIF_Linear, true);
+		}
 	}
 
 	// Disable detection collision so we can't hit it again
