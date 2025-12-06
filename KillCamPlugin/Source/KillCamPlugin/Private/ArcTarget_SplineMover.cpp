@@ -9,13 +9,23 @@ AArcTarget_SplineMover::AArcTarget_SplineMover()
 	Direction = 1;
 }
 
+void AArcTarget_SplineMover::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (SplinePathActor)
+	{
+		CachedSplineComponent = SplinePathActor->FindComponentByClass<USplineComponent>();
+	}
+}
+
 void AArcTarget_SplineMover::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bIsShattered || !SplinePathActor) return;
+	if (bIsShattered || !CachedSplineComponent.IsValid()) return;
 
-	USplineComponent* SplineComp = SplinePathActor->FindComponentByClass<USplineComponent>();
+	USplineComponent* SplineComp = CachedSplineComponent.Get();
 	if (SplineComp)
 	{
 		float SplineLength = SplineComp->GetSplineLength();

@@ -1,5 +1,6 @@
 #include "ArcTarget_Nest.h"
 #include "TimerManager.h"
+#include "KillCamPlugin.h"
 
 AArcTarget_Nest::AArcTarget_Nest()
 {
@@ -20,6 +21,7 @@ void AArcTarget_Nest::OnChildDestroyed(AArcTarget* DestroyedTarget)
 {
 	if (DestroyedTarget == ChildTarget)
 	{
+		UE_LOG(LogKillCam, Log, TEXT("Nest: Child destroyed. Respawning in %f seconds."), RegenTime);
 		GetWorld()->GetTimerManager().SetTimer(TimerHandle_Respawn, this, &AArcTarget_Nest::RespawnChild, RegenTime, false);
 	}
 }
@@ -28,6 +30,7 @@ void AArcTarget_Nest::RespawnChild()
 {
 	if (ChildTarget)
 	{
+		UE_LOG(LogKillCam, Log, TEXT("Nest: Respawning Child Target."));
 		// Reset logic depends on ChildTarget implementation (e.g. Health = 100, bIsShattered = false, Reset GeometryCollection)
 		// For base class, we just unhide and reset variables manually for now.
 		ChildTarget->bIsShattered = false;

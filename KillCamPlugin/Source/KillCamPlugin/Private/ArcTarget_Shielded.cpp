@@ -1,4 +1,5 @@
 #include "ArcTarget_Shielded.h"
+#include "KillCamPlugin.h"
 
 void AArcTarget_Shielded::HandleHit(FVector ImpactPoint, FVector ImpactNormal, bool bIsRicochet)
 {
@@ -16,6 +17,6 @@ void AArcTarget_Shielded::HandleHit(FVector ImpactPoint, FVector ImpactNormal, b
 	else
 	{
 		// Clank logic (Play Sound)
-		UE_LOG(LogTemp, Log, TEXT("Shielded Target hit from front - Clank!"));
+		UE_LOG(LogKillCam, Log, TEXT("Shielded Target hit from front - Clank!"));
 	}
 }

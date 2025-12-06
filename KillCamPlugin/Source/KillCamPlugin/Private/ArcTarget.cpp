@@ -2,6 +2,7 @@
 #include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "KillCamPlugin.h"
 
 AArcTarget::AArcTarget()
 {

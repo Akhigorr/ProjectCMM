@@ -28,7 +28,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arc Target|Spline")
 	bool bPingPong;
 
+protected:
+	virtual void BeginPlay() override;
+
 private:
 	float DistanceAlongSpline;
 	int Direction;
+
+	TWeakObjectPtr<USplineComponent> CachedSplineComponent;
 };
