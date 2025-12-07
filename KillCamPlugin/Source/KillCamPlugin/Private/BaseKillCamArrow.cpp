@@ -62,7 +62,7 @@ void ABaseKillCamArrow::BeginPlay()
 		// MoveIgnoreActor adds the owner to the IgnoreActors list for all primitive components
 		if (UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(RootComponent))
 		{
-			RootPrim->MoveIgnoreActor(GetOwner());
+			RootPrim->IgnoreActorWhenMoving(GetOwner(), true);
 		}
 
 		// Explicitly ensure the movement component knows (if it has specific ignore logic)
