@@ -6,55 +6,34 @@
 
 ## Executive Summary
 
-The codebase is generally well-structured and adheres to many Unreal Engine 5 modern practices (e.g., usage of `TObjectPtr`, `TWeakObjectPtr`). However, there are several instances of **potential runtime crashes** related to accessing `GetWorld()` without validation. While `GetWorld()` is typically valid during gameplay `Tick` and `BeginPlay`, it can return `nullptr` during actor destruction, level transitions, or in specific editor contexts, leading to immediate hard crashes when dereferenced.
+The codebase is generally well-structured and adheres to many Unreal Engine 5 modern practices (e.g., usage of `TObjectPtr`, `TWeakObjectPtr`).
+
+Initially, 4 critical Null Pointer Vulnerabilities were identified where `GetWorld()` was accessed without validation. **These have now been fixed.**
 
 No severe Garbage Collection (GC) risks (dangling raw pointers) or Thread Safety violations were found.
 
 ---
 
-## 1. Null Pointer Vulnerabilities (Critical)
+## 1. Null Pointer Vulnerabilities (Resolved)
 
 **Risk:** Immediate Crash (Access Violation)
 **Description:** Calling `GetWorld()->Function()` without checking if `GetWorld()` returns a valid pointer.
 
 ### File: `KillCamComponent.cpp`
 *   **Location:** `TickComponent` function.
-*   **Issue:** `GetWorld()->GetTimerManager()` is called directly.
-*   **Snippet:**
-    ```cpp
-    if (!GetWorld()->GetTimerManager().IsTimerActive(TimerHandle_StopCam))
-    {
-        GetWorld()->GetTimerManager().SetTimer(TimerHandle_StopCam, this, &UKillCamComponent::StopKillCam, PostImpactDelay, false);
-    }
-    ```
-*   **Recommendation:** Wrap in `if (UWorld* World = GetWorld()) { ... }`.
+*   **Status:** **FIXED**. Wrapped in `if (UWorld* World = GetWorld())`.
 
 ### File: `RealisticArrowMovementComponent.cpp`
 *   **Location:** `PerformHitStop` function.
-*   **Issue:** `GetWorld()->GetTimerManager()` is called directly.
-*   **Snippet:**
-    ```cpp
-    GetWorld()->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
-    ```
-*   **Recommendation:** Wrap in `if (UWorld* World = GetWorld())`.
+*   **Status:** **FIXED**. Wrapped in `if (UWorld* World = GetWorld())`.
 
 ### File: `ArcTarget_Switch.cpp`
 *   **Location:** `HandleHit` function.
-*   **Issue:** `GetWorld()->GetTimerManager()` is called directly.
-*   **Snippet:**
-    ```cpp
-    GetWorld()->GetTimerManager().SetTimer(TimerHandle_HideLinked, this, &AArcTarget_Switch::HideLinkedTarget, RevealDuration, false);
-    ```
-*   **Recommendation:** Check `GetWorld()` before accessing TimerManager.
+*   **Status:** **FIXED**. Wrapped in `if (UWorld* World = GetWorld())`.
 
 ### File: `ArcTarget_Nest.cpp`
 *   **Location:** `OnChildDestroyed` function.
-*   **Issue:** `GetWorld()->GetTimerManager()` is called directly.
-*   **Snippet:**
-    ```cpp
-    GetWorld()->GetTimerManager().SetTimer(TimerHandle_Respawn, this, &AArcTarget_Nest::RespawnChild, RegenTime, false);
-    ```
-*   **Recommendation:** Check `GetWorld()` before accessing TimerManager.
+*   **Status:** **FIXED**. Wrapped in `if (UWorld* World = GetWorld())`.
 
 ---
 
@@ -79,7 +58,7 @@ No severe Garbage Collection (GC) risks (dangling raw pointers) or Thread Safety
 | Category | Status | Notes |
 | :--- | :---: | :--- |
 | **Garbage Collection** | **PASS** | No raw `UObject*` detected. `TObjectPtr` used correctly. |
-| **Null Pointers** | **FAIL** | 4 instances of unsafe `GetWorld()` dereferencing. |
+| **Null Pointers** | **PASS** | All unsafe `GetWorld()` dereferences have been patched. |
 | **Thread Safety** | **PASS** | No async gameplay logic detected. |
 | **Container Safety** | **PASS** | Iteration logic appears safe. |
 | **Constructor Safety** | **PASS** | Constructors do not access World or Singletons. |

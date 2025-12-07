@@ -15,7 +15,10 @@ void AArcTarget_Switch::HandleHit(FVector ImpactPoint, FVector ImpactNormal, boo
 		LinkedTarget->SetActorHiddenInGame(false);
 		LinkedTarget->SetActorEnableCollision(true); // Assuming we want to enable it too
 
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle_HideLinked, this, &AArcTarget_Switch::HideLinkedTarget, RevealDuration, false);
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(TimerHandle_HideLinked, this, &AArcTarget_Switch::HideLinkedTarget, RevealDuration, false);
+		}
 	}
 }
 

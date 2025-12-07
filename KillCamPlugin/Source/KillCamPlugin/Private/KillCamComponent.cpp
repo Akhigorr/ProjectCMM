@@ -84,10 +84,13 @@ void UKillCamComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	if (bAutoSwitchView && CurrentSpeed < 10.0f)
 	{
 		// Arrow has stopped.
-		if (!GetWorld()->GetTimerManager().IsTimerActive(TimerHandle_StopCam))
+		if (UWorld* World = GetWorld())
 		{
-			// Start the countdown to return control
-			GetWorld()->GetTimerManager().SetTimer(TimerHandle_StopCam, this, &UKillCamComponent::StopKillCam, PostImpactDelay, false);
+			if (!World->GetTimerManager().IsTimerActive(TimerHandle_StopCam))
+			{
+				// Start the countdown to return control
+				World->GetTimerManager().SetTimer(TimerHandle_StopCam, this, &UKillCamComponent::StopKillCam, PostImpactDelay, false);
+			}
 		}
 	}
 

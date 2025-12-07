@@ -254,7 +254,10 @@ void URealisticArrowMovementComponent::PerformHitStop()
 	float Delay = HitStopDuration * HitStopScale;
 	if (Delay < 0.0001f) Delay = 0.0001f; // Minimum tick
 
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
+	}
 }
 
 void URealisticArrowMovementComponent::StopHitStop()
