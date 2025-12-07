@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "ArcTarget.h"
-#include "ArcTarget_BlackHole.h"
 #include "ArcTarget_BlackHole.generated.h"
 
 class URadialForceComponent;
