@@ -10,7 +10,7 @@ The codebase is generally well-structured and adheres to many Unreal Engine 5 mo
 
 Initially, 4 critical Null Pointer Vulnerabilities were identified where `GetWorld()` was accessed without validation. **These have now been fixed.**
 
-No severe Garbage Collection (GC) risks (dangling raw pointers) or Thread Safety violations were found.
+A secondary "Deep Dive" audit was performed focusing on Performance, State Resilience, Time Dilation, and Physics. **All identified high-priority issues have been fixed.**
 
 ---
 
@@ -63,3 +63,22 @@ No severe Garbage Collection (GC) risks (dangling raw pointers) or Thread Safety
 | **Container Safety** | **PASS** | Iteration logic appears safe. |
 | **Constructor Safety** | **PASS** | Constructors do not access World or Singletons. |
 | **Casting & Types** | **PASS** | Standard `Cast<T>` and `IsA` used correctly. |
+
+---
+
+## 4. Deep Dive Findings (Resolved)
+
+### A. Performance & Optimization
+*   **Issue:** `TickComponent` was calling `TriggerLookAhead()` every frame.
+*   **Status:** **FIXED**.
+*   **Fix:** Added `PredictionInterval` (default 0.1s) to throttle prediction checks to 10Hz, significantly reducing CPU load.
+
+### B. Time Dilation Conflicts (Architecture)
+*   **Issue:** Components were modifying `GlobalTimeDilation` directly, leading to conflicts.
+*   **Status:** **FIXED**.
+*   **Fix:** Implemented `RegisterTimeDilationRequest` and `UnregisterTimeDilationRequest` in `UKillCamWorldSubsystem`. Updated `KillCamComponent` and `RealisticArrowMovementComponent` to use this managed system, ensuring the lowest dilation value is applied safely.
+
+### C. Physics Tunneling
+*   **Issue:** Fast arrows risked tunneling through objects.
+*   **Status:** **FIXED**.
+*   **Fix:** Enabled `SetUseCCD(true)` on the `ABaseKillCamArrow` collision component.

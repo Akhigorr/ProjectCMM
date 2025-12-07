@@ -69,9 +69,25 @@ public:
 	/** Clears the specialized audio mix. */
 	void ExitKillCamAudioState();
 
+	// --- Time Dilation Management ---
+
+	/** Registers a request for time dilation. The lowest value among all requests will be applied. */
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Time Dilation")
+	void RegisterTimeDilationRequest(const UObject* Requester, float Value);
+
+	/** Removes a request for time dilation. */
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Time Dilation")
+	void UnregisterTimeDilationRequest(const UObject* Requester);
+
 private:
 	FArrowEnvironmentStats CurrentStats;
 
 	TObjectPtr<USoundMix> CachedSoundMix;
 	TObjectPtr<USoundClass> CachedSoundClass;
+
+	/** Map of requesters to their desired time dilation. We use WeakPtr to safely ignore dead objects. */
+	TMap<TWeakObjectPtr<const UObject>, float> TimeDilationRequests;
+
+	/** Recalculates and applies the global time dilation based on current requests. */
+	void UpdateGlobalTimeDilation();
 };

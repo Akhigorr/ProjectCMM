@@ -7,6 +7,7 @@
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
 #include "KillCamPlugin.h" // For Logging
+#include "KillCamWorldSubsystem.h"
 
 UKillCamComponent::UKillCamComponent()
 {
@@ -20,6 +21,8 @@ UKillCamComponent::UKillCamComponent()
 	CameraLagSpeed = 10.0f;
 	LookAheadDistance = 5000.0f;
 	PredictionRadius = 10.0f;
+	PredictionInterval = 0.1f; // Default 10Hz
+	TimeUntilNextPrediction = 0.0f;
 	bIsKillCamActive = false;
 
 	// Camera Defaults
@@ -64,9 +67,13 @@ void UKillCamComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 		// Auto-Trigger Logic for Predictive Mode
 		if (KillCamMode == EKillCamMode::Predictive && OwnerActor.IsValid())
 		{
-			// Try to trigger prediction every tick
-			// Note: For performance, user might want to throttle this, but for "AAA" accuracy, per-tick is needed.
-			TriggerLookAhead();
+			// Throttle prediction
+			TimeUntilNextPrediction -= DeltaTime;
+			if (TimeUntilNextPrediction <= 0.0f)
+			{
+				TimeUntilNextPrediction = PredictionInterval;
+				TriggerLookAhead();
+			}
 		}
 		return;
 	}
@@ -206,7 +213,14 @@ void UKillCamComponent::StartKillCam()
 	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence STARTED. Dilation: %f"), TargetTimeDilation);
 
 	bIsKillCamActive = true;
-	UGameplayStatics::SetGlobalTimeDilation(this, TargetTimeDilation);
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			Subsystem->RegisterTimeDilationRequest(this, TargetTimeDilation);
+		}
+	}
 
 	if (bAutoSwitchView && OwnerActor.IsValid())
 	{
@@ -239,13 +253,13 @@ void UKillCamComponent::StopKillCam()
 	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence ENDED. Restoring state."));
 
 	bIsKillCamActive = false;
-	UGameplayStatics::SetGlobalTimeDilation(this, 1.0f);
 
-	// Audio Stop
-	if (GetWorld())
+	if (UWorld* World = GetWorld())
 	{
-		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
+		if (UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
 		{
+			Subsystem->UnregisterTimeDilationRequest(this);
+			// Audio Stop
 			Subsystem->ExitKillCamAudioState();
 		}
 	}

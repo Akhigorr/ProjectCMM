@@ -241,32 +241,32 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 
 void URealisticArrowMovementComponent::PerformHitStop()
 {
-	// Cache current dilation (in case kill cam is active)
-	PreHitStopTimeDilation = UGameplayStatics::GetGlobalTimeDilation(this);
-
-	// Set to extremely low (nearly stopped)
 	float HitStopScale = 0.001f;
-	UGameplayStatics::SetGlobalTimeDilation(this, HitStopScale);
-
-	// Timer needs to account for dilation.
-	// Dilation = 0.001.
-	// If we want 0.05 real seconds, the game time that passes is 0.05 * 0.001.
-	float Delay = HitStopDuration * HitStopScale;
-	if (Delay < 0.0001f) Delay = 0.0001f; // Minimum tick
 
 	if (UWorld* World = GetWorld())
 	{
+		if (UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			Subsystem->RegisterTimeDilationRequest(this, HitStopScale);
+		}
+
+		// Timer needs to account for dilation.
+		// Dilation = 0.001.
+		// If we want 0.05 real seconds, the game time that passes is 0.05 * 0.001.
+		float Delay = HitStopDuration * HitStopScale;
+		if (Delay < 0.0001f) Delay = 0.0001f; // Minimum tick
+
 		World->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
 	}
 }
 
 void URealisticArrowMovementComponent::StopHitStop()
 {
-	// Only restore if the current dilation is still our HitStop value (0.001f).
-	// If it changed (e.g., KillCam ended and set it to 1.0f), we respect that change.
-	float CurrentDilation = UGameplayStatics::GetGlobalTimeDilation(this);
-	if (FMath::IsNearlyEqual(CurrentDilation, 0.001f, 0.0001f))
+	if (UWorld* World = GetWorld())
 	{
-		UGameplayStatics::SetGlobalTimeDilation(this, PreHitStopTimeDilation);
+		if (UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
+		{
+			Subsystem->UnregisterTimeDilationRequest(this);
+		}
 	}
 }

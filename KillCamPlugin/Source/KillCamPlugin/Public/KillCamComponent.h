@@ -72,6 +72,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Prediction")
 	float PredictionRadius;
 
+	/** Frequency of prediction checks in seconds (e.g. 0.1 for 10Hz). 0.0 = Every Tick. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Prediction")
+	float PredictionInterval;
+
 	/** Debug: If true, TriggerLookAhead will always succeed (force start) without hitting anything. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Kill Cam|Debug")
 	bool bDebugForceAlwaysTrigger;
@@ -141,6 +145,9 @@ private:
 
 	/** The view target we had before switching */
 	TWeakObjectPtr<AActor> OriginalViewTarget;
+
+	/** Internal timer for prediction throttling */
+	float TimeUntilNextPrediction;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };

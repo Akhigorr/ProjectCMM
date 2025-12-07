@@ -13,6 +13,7 @@ ABaseKillCamArrow::ABaseKillCamArrow()
 	USphereComponent* CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->SetCollisionProfileName("Projectile");
+	CollisionComp->SetUseCCD(true); // Prevent tunneling at high speeds
 	RootComponent = CollisionComp;
 
 	// Create Movement Component
