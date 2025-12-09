@@ -6,6 +6,8 @@
 #include "Sound/SoundClass.h"
 #include "KillCamWorldSubsystem.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnScoreChanged, int32, NewTotalScore, int32, PointsAdded);
+
 /**
  * Struct defining global environmental factors for arrows in this world.
  */
@@ -57,21 +59,65 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arrow Environment")
 	float GetGlobalDragModifier() const { return CurrentStats.GlobalDragModifier; }
 
+	// --- Score Management ---
+
+	UPROPERTY(BlueprintAssignable, Category = "Kill Cam|Score")
+	FOnScoreChanged OnScoreChanged;
+
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Score")
+	void AddScore(int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Score")
+	void ResetScore();
+
+	UFUNCTION(BlueprintPure, Category = "Kill Cam|Score")
+	int32 GetTotalScore() const { return TotalScore; }
+
+	// --- Time Dilation Management ---
+
+	/**
+	 * Requests a specific time dilation value. Lowest value wins.
+	 * Using Object Requester ensures requests are auto-cleared if the object is destroyed/unloaded.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Time")
+	void RequestTimeDilation(const UObject* Requester, float DilationValue);
+
+	/** Removes a time dilation request for this object. */
+	UFUNCTION(BlueprintCallable, Category = "Kill Cam|Time")
+	void ClearTimeDilationRequest(const UObject* Requester);
+
+	/** Gets the current active kill cam count. */
+	UFUNCTION(BlueprintPure, Category = "Kill Cam")
+	int32 GetActiveKillCamCount() const { return ActiveKillCamCount; }
+
+	/** Register that a Kill Cam sequence has started. */
+	void RegisterKillCamStart();
+
+	/** Register that a Kill Cam sequence has ended. */
+	void RegisterKillCamStop();
+
 	// --- Audio Management ---
 
 	/** Sets the sound mix to use during Kill Cam (e.g., to mute background noise). */
 	UFUNCTION(BlueprintCallable, Category = "Arrow Environment|Audio")
 	void SetAudioSettings(USoundMix* Mix, USoundClass* Class);
 
-	/** Activates the specialized audio mix for slow motion. */
-	void EnterKillCamAudioState();
-
-	/** Clears the specialized audio mix. */
-	void ExitKillCamAudioState();
-
 private:
 	FArrowEnvironmentStats CurrentStats;
 
 	TObjectPtr<USoundMix> CachedSoundMix;
 	TObjectPtr<USoundClass> CachedSoundClass;
+
+	// Score
+	int32 TotalScore = 0;
+
+	// Time Dilation
+	// We use TWeakObjectPtr to detect stale objects (unloaded levels/destroyed actors)
+	TMap<TWeakObjectPtr<const UObject>, float> TimeDilationRequests;
+	void UpdateGlobalTimeDilation();
+
+	// Kill Cam Tracking
+	int32 ActiveKillCamCount = 0;
+	void EnterKillCamAudioState();
+	void ExitKillCamAudioState();
 };

@@ -7,6 +7,7 @@
 #include "TimerManager.h"
 #include "KillCamWorldSubsystem.h"
 #include "KillCamPlugin.h"
+#include "KillCamStatics.h"
 
 URealisticArrowMovementComponent::URealisticArrowMovementComponent()
 {
@@ -45,6 +46,17 @@ void URealisticArrowMovementComponent::ApplyBallisticStats(const FArrowBallistic
 	bEnableBounce = Stats.bEnableBounce;
 }
 
+FArrowBallisticStats URealisticArrowMovementComponent::GetCurrentBallisticStats() const
+{
+	FArrowBallisticStats Stats;
+	Stats.QuadraticDragCoefficient = QuadraticDragCoefficient;
+	Stats.GravityScale = ProjectileGravityScale;
+	Stats.FletchingRotationSpeed = FletchingRotationSpeed;
+	Stats.PenetrationDepth = PenetrationDepth;
+	Stats.bEnableBounce = bEnableBounce;
+	return Stats;
+}
+
 void URealisticArrowMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -64,6 +76,12 @@ void URealisticArrowMovementComponent::BeginPlay()
 				break;
 			}
 		}
+	}
+
+	// Cache Subsystem
+	if (GetWorld())
+	{
+		CachedSubsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>();
 	}
 }
 
@@ -92,96 +110,19 @@ void URealisticArrowMovementComponent::TickComponent(float DeltaTime, enum ELeve
 
 FVector URealisticArrowMovementComponent::ComputeAcceleration(const FVector& InVelocity, float DeltaTime) const
 {
-	// Calculate Gravity Scale (Local * Global)
-	float FinalGravity = ProjectileGravityScale;
-	float FinalDrag = QuadraticDragCoefficient;
-	FVector FinalWind = WindVector;
+	float GravityZ = GetGravityZ();
+	FArrowBallisticStats Stats = GetCurrentBallisticStats();
 
-	const UWorld* World = GetWorld();
-	if (World)
-	{
-		if (const UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
-		{
-			FinalGravity *= Subsystem->GetGlobalGravityScalar();
-			FinalDrag *= Subsystem->GetGlobalDragModifier();
-			FinalWind += Subsystem->GetGlobalWind();
-		}
-	}
-
-	// We can't easily modify 'Super' gravity calculation inside ComputeAcceleration cleanly
-	// without re-implementing it or modifying member variable.
-	// Since ComputeAcceleration is const, we cannot modify ProjectileGravityScale here.
-	// However, Super::ComputeAcceleration uses ProjectileGravityScale.
-	// Workaround: We add the Extra Gravity ourselves if it's different from 1.0,
-	// OR we modify the member variable in Tick. Modifying in Tick is safer for the base class logic.
-
-	// Let's rely on TickComponent to sync the Global Gravity Scalar to the member variable?
-	// No, 'const' function.
-
-	// Standard Projectile Acceleration = (Gravity + ExternalForces)
-	// We will calculate our own terms.
-
-	FVector Acceleration = FVector::ZeroVector;
-
-	// 1. Re-implement Gravity since we can't affect Super's read of GravityScale in this const func easily
-	// actually Super::ComputeAcceleration does: Acceleration.Z += GetGravityZ() * ProjectileGravityScale;
-	// So we call Super, then Add/Subtract the difference?
-	// Or better: Let's just calculate Drag and Wind here, and handle Gravity in Tick or just add "Extra" gravity here.
-
-	Acceleration = Super::ComputeAcceleration(InVelocity, DeltaTime);
-
-	// If GlobalGravity != 1.0, apply the difference
-	// Current Gravity applied by Super is (GravityZ * LocalScale).
-	// We want (GravityZ * LocalScale * GlobalScale).
-	// Added Gravity = (GravityZ * LocalScale * GlobalScale) - (GravityZ * LocalScale)
-	//               = (GravityZ * LocalScale) * (GlobalScale - 1.0)
-	if (World)
-	{
-		float GlobalGrav = 1.0f;
-		if (const UKillCamWorldSubsystem* Subsystem = World->GetSubsystem<UKillCamWorldSubsystem>())
-		{
-			GlobalGrav = Subsystem->GetGlobalGravityScalar();
-		}
-
-		if (!FMath::IsNearlyEqual(GlobalGrav, 1.0f))
-		{
-			float GravityZ = GetGravityZ();
-			Acceleration.Z += (GravityZ * ProjectileGravityScale) * (GlobalGrav - 1.0f);
-		}
-	}
-
-	// --- Quadratic Drag ---
-	// Force = -C * v^2 * direction
-	if (FinalDrag > 0.0f && !InVelocity.IsZero())
-	{
-		float SpeedSq = InVelocity.SizeSquared();
-		FVector DragForce = -InVelocity.GetSafeNormal() * (FinalDrag * SpeedSq);
-		Acceleration += DragForce;
-	}
-
-	// --- Wind ---
-	if (!FinalWind.IsZero())
-	{
-		Acceleration += FinalWind;
-	}
-
-	return Acceleration;
+	// Use shared logic
+	return UKillCamStatics::GetArrowAcceleration(InVelocity, GravityZ, Stats, CachedSubsystem.Get());
 }
 
 void URealisticArrowMovementComponent::HandleImpact(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
 {
 	// Calculate Impact Angle
-	// Normal is perpendicular to surface. Velocity is incoming.
-	// Dot(Normal, -Forward) gives Cos(Angle) where 1.0 is direct hit (0 deg), 0.0 is graze (90 deg).
 	FVector Forward = Velocity.GetSafeNormal();
 	float CosAngle = FVector::DotProduct(Hit.Normal, -Forward);
 	float ImpactAngleDeg = FMath::RadiansToDegrees(FMath::Acos(CosAngle)); // 0 to 90
-
-	// User defined "RicochetMaxAngle" is defined as deviation from Normal?
-	// Let's interpret user setting:
-	// If User says "RicochetMaxAngle = 70", it means if the hit is within 70 degrees of the normal (mostly direct), it sticks.
-	// If it is > 70 (glancing, 70-90), it bounces.
-	// Wait, standard convention: 0 is head on. 90 is parallel.
 
 	bool bIsGlancing = ImpactAngleDeg > RicochetMaxAngle;
 
@@ -210,6 +151,20 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 	if (bEnableHitStop)
 	{
 		PerformHitStop();
+	}
+
+	// Apply Damage to the target so it can react (e.g. AArcTarget::Shatter)
+	if (Hit.GetActor())
+	{
+		UGameplayStatics::ApplyPointDamage(
+			Hit.GetActor(),
+			100.0f, // Base Damage
+			ForwardDir,
+			Hit,
+			GetOwner()->GetInstigatorController(),
+			GetOwner(),
+			nullptr // DamageType class
+		);
 	}
 
 	StopMovementImmediately();
@@ -241,29 +196,61 @@ void URealisticArrowMovementComponent::StickToTarget(const FHitResult& Hit)
 
 void URealisticArrowMovementComponent::PerformHitStop()
 {
-	// Cache current dilation (in case kill cam is active)
-	PreHitStopTimeDilation = UGameplayStatics::GetGlobalTimeDilation(this);
+	// 1. Request Time Dilation via Subsystem (0.001f is hard limit)
+	if (CachedSubsystem.IsValid())
+	{
+		// Use this component as the unique requester key to avoid name clashes
+		CachedSubsystem->RequestTimeDilation(this, 0.001f);
+	}
 
-	// Set to extremely low (nearly stopped)
-	float HitStopScale = 0.001f;
-	UGameplayStatics::SetGlobalTimeDilation(this, HitStopScale);
+	// 2. Set Timer for Next Tick loop to count down real-time
+	RemainingHitStopDuration = HitStopDuration;
 
-	// Timer needs to account for dilation.
-	// Dilation = 0.001.
-	// If we want 0.05 real seconds, the game time that passes is 0.05 * 0.001.
-	float Delay = HitStopDuration * HitStopScale;
-	if (Delay < 0.0001f) Delay = 0.0001f; // Minimum tick
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &URealisticArrowMovementComponent::OnHitStopNextTick);
+	}
+}
 
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle_HitStop, this, &URealisticArrowMovementComponent::StopHitStop, Delay, false);
+void URealisticArrowMovementComponent::OnHitStopNextTick()
+{
+	// Consume real time
+	if (GetWorld())
+	{
+		float RealDelta = GetWorld()->GetRealTimeSeconds() - GetWorld()->GetTimeSeconds();
+		// Wait, GetTimeSeconds is dilated. GetRealTimeSeconds is monotonic real time? No.
+		// World->GetDeltaSeconds() is game time. World->GetRealTimeSeconds() is usually platform time.
+		// But DeltaSeconds is easier if we just divide by dilation?
+		// Actually, GetWorld()->GetDeltaSeconds() * (1/Dilation) is approx Real Time.
+		// Better: use direct platform time difference if we tracked it, OR just assume 1 frame is small enough?
+		// User specifically asked for SetTimerForNextTick for "sub-frame" or "next-tick" delays logic.
+		// But we need to wait for X real seconds.
+
+		// Let's use `UGameplayStatics::GetWorldDeltaSeconds` (dilated) / Dilation to get RealDelta.
+		float Dilation = UGameplayStatics::GetGlobalTimeDilation(this);
+		if (Dilation < SMALL_NUMBER) Dilation = 0.001f;
+
+		float DT = GetWorld()->GetDeltaSeconds();
+		float RealDT = DT / Dilation;
+
+		RemainingHitStopDuration -= RealDT;
+
+		if (RemainingHitStopDuration <= 0.0f)
+		{
+			StopHitStop();
+		}
+		else
+		{
+			// Continue loop
+			GetWorld()->GetTimerManager().SetTimerForNextTick(this, &URealisticArrowMovementComponent::OnHitStopNextTick);
+		}
+	}
 }
 
 void URealisticArrowMovementComponent::StopHitStop()
 {
-	// Only restore if the current dilation is still our HitStop value (0.001f).
-	// If it changed (e.g., KillCam ended and set it to 1.0f), we respect that change.
-	float CurrentDilation = UGameplayStatics::GetGlobalTimeDilation(this);
-	if (FMath::IsNearlyEqual(CurrentDilation, 0.001f, 0.0001f))
+	if (CachedSubsystem.IsValid())
 	{
-		UGameplayStatics::SetGlobalTimeDilation(this, PreHitStopTimeDilation);
+		CachedSubsystem->ClearTimeDilationRequest(this);
 	}
 }

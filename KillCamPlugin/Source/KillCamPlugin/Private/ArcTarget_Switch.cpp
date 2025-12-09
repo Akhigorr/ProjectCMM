@@ -10,20 +10,28 @@ void AArcTarget_Switch::HandleHit(FVector ImpactPoint, FVector ImpactNormal, boo
 {
 	// Do not shatter.
 
-	if (LinkedTarget)
+	if (LinkedTarget.IsValid())
 	{
-		LinkedTarget->SetActorHiddenInGame(false);
-		LinkedTarget->SetActorEnableCollision(true); // Assuming we want to enable it too
+		AArcTarget* Target = LinkedTarget.Get();
+		if (Target)
+		{
+			Target->SetActorHiddenInGame(false);
+			Target->SetActorEnableCollision(true); // Assuming we want to enable it too
 
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle_HideLinked, this, &AArcTarget_Switch::HideLinkedTarget, RevealDuration, false);
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle_HideLinked, this, &AArcTarget_Switch::HideLinkedTarget, RevealDuration, false);
+		}
 	}
 }
 
 void AArcTarget_Switch::HideLinkedTarget()
 {
-	if (LinkedTarget)
+	if (LinkedTarget.IsValid())
 	{
-		LinkedTarget->SetActorHiddenInGame(true);
-		LinkedTarget->SetActorEnableCollision(false);
+		AArcTarget* Target = LinkedTarget.Get();
+		if (Target)
+		{
+			Target->SetActorHiddenInGame(true);
+			Target->SetActorEnableCollision(false);
+		}
 	}
 }

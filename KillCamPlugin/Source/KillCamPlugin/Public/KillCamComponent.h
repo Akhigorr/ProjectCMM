@@ -6,6 +6,7 @@
 
 // Forward declarations to avoid including Engine headers in Public
 class UCurveFloat;
+class UKillCamWorldSubsystem;
 
 UENUM(BlueprintType)
 enum class EKillCamMode : uint8
@@ -138,6 +139,9 @@ private:
 
 	/** Cached reference to the owner as an Actor */
 	TWeakObjectPtr<AActor> OwnerActor;
+
+	/** Cached Subsystem */
+	TWeakObjectPtr<UKillCamWorldSubsystem> CachedSubsystem;
 
 	/** The view target we had before switching */
 	TWeakObjectPtr<AActor> OriginalViewTarget;

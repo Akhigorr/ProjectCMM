@@ -24,3 +24,18 @@ void AArrowEnvironmentManager::BeginPlay()
 		}
 	}
 }
+
+void AArrowEnvironmentManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	// Reset stats when this manager is removed (e.g. streaming unload)
+	if (GetWorld())
+	{
+		UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>();
+		if (Subsystem)
+		{
+			Subsystem->ResetEnvironmentStats();
+		}
+	}
+}

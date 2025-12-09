@@ -7,6 +7,9 @@
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
 #include "KillCamPlugin.h" // For Logging
+#include "KillCamWorldSubsystem.h"
+#include "KillCamStatics.h"
+#include "RealisticArrowMovementComponent.h" // Needed for stats? Or just assume generic
 
 UKillCamComponent::UKillCamComponent()
 {
@@ -37,6 +40,11 @@ void UKillCamComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	OwnerActor = GetOwner();
+
+	if (GetWorld())
+	{
+		CachedSubsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>();
+	}
 
 	if (KillCamMode == EKillCamMode::Realtime)
 	{
@@ -147,6 +155,7 @@ bool UKillCamComponent::PerformPrediction(FHitResult& OutHit)
 
 	if (LookAheadMethod == ELookAheadMethod::Trace)
 	{
+		// Simple line/sphere trace
 		FVector End = Start + (Direction * LookAheadDistance);
 
 		TArray<AActor*> ActorsToIgnore;
@@ -169,28 +178,44 @@ bool UKillCamComponent::PerformPrediction(FHitResult& OutHit)
 	}
 	else if (LookAheadMethod == ELookAheadMethod::Physics)
 	{
-		FPredictProjectilePathParams PathParams;
-		PathParams.StartLocation = Start;
-		PathParams.LaunchVelocity = Velocity;
-		PathParams.bTraceWithCollision = true;
-		PathParams.ProjectileRadius = PredictionRadius;
-		PathParams.MaxSimTime = 2.0f; // Simulate up to 2 seconds ahead
-		PathParams.bTraceWithChannel = true;
-		PathParams.TraceChannel = ECC_Visibility;
-		PathParams.ActorsToIgnore.Add(OwnerActor.Get());
-		PathParams.DrawDebugType = bDrawDebugPrediction ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
-		PathParams.DrawDebugTime = 1.0f;
-
-		// Typically we might want to check against specific object types, but channel is generic enough
-
-		FPredictProjectilePathResult PathResult;
-		bool bSuccess = UGameplayStatics::PredictProjectilePath(this, PathParams, PathResult);
-
-		if (PathResult.HitResult.bBlockingHit)
+		// Custom Physics Prediction via KillCamStatics
+		FArrowBallisticStats Stats;
+		// Try to get stats from movement component (Safe Access)
+		if (URealisticArrowMovementComponent* MoveComp = Cast<URealisticArrowMovementComponent>(OwnerActor.Get()->GetComponentByClass(URealisticArrowMovementComponent::StaticClass())))
 		{
-			OutHit = PathResult.HitResult;
-			return true;
+			Stats = MoveComp->GetCurrentBallisticStats();
 		}
+
+		TArray<AActor*> ActorsToIgnore;
+		ActorsToIgnore.Add(OwnerActor.Get());
+
+		TArray<FVector> PathPoints;
+		bool bHit = UKillCamStatics::PredictArrowPath(
+			this,
+			Start,
+			Velocity,
+			Stats,
+			2.0f, // Max Sim Time
+			30.0f, // 30hz
+			PredictionRadius,
+			ActorsToIgnore,
+			OutHit,
+			PathPoints
+		);
+
+		if (bDrawDebugPrediction && PathPoints.Num() > 1)
+		{
+			for (int32 i = 0; i < PathPoints.Num() - 1; i++)
+			{
+				DrawDebugLine(GetWorld(), PathPoints[i], PathPoints[i+1], FColor::Green, false, -1.0f, 0, 2.0f);
+			}
+			if (bHit)
+			{
+				DrawDebugSphere(GetWorld(), OutHit.Location, 15.0f, 8, FColor::Red, false, -1.0f);
+			}
+		}
+
+		return bHit;
 	}
 
 	return false;
@@ -203,7 +228,15 @@ void UKillCamComponent::StartKillCam()
 	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence STARTED. Dilation: %f"), TargetTimeDilation);
 
 	bIsKillCamActive = true;
-	UGameplayStatics::SetGlobalTimeDilation(this, TargetTimeDilation);
+
+	// Use Subsystem
+	if (CachedSubsystem.IsValid())
+	{
+		CachedSubsystem->RegisterKillCamStart();
+
+		// Use 'this' (the component) as unique requester to support multiple arrows
+		CachedSubsystem->RequestTimeDilation(this, TargetTimeDilation);
+	}
 
 	if (bAutoSwitchView && OwnerActor.IsValid())
 	{
@@ -217,15 +250,6 @@ void UKillCamComponent::StartKillCam()
 		}
 	}
 
-	// Audio Start
-	if (GetWorld())
-	{
-		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
-		{
-			Subsystem->EnterKillCamAudioState();
-		}
-	}
-
 	OnKillCamStart.Broadcast();
 }
 
@@ -236,15 +260,12 @@ void UKillCamComponent::StopKillCam()
 	UE_LOG(LogKillCam, Log, TEXT("KillCam: Sequence ENDED. Restoring state."));
 
 	bIsKillCamActive = false;
-	UGameplayStatics::SetGlobalTimeDilation(this, 1.0f);
 
-	// Audio Stop
-	if (GetWorld())
+	if (CachedSubsystem.IsValid())
 	{
-		if (UKillCamWorldSubsystem* Subsystem = GetWorld()->GetSubsystem<UKillCamWorldSubsystem>())
-		{
-			Subsystem->ExitKillCamAudioState();
-		}
+		CachedSubsystem->RegisterKillCamStop();
+		// Use 'this' to clear the request
+		CachedSubsystem->ClearTimeDilationRequest(this);
 	}
 
 	if (bAutoSwitchView)
