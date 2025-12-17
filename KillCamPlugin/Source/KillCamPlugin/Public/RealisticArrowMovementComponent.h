@@ -129,9 +129,6 @@ private:
 	/** Cached mesh for spinning */
 	TWeakObjectPtr<UPrimitiveComponent> CachedMeshToSpin;
 
-	/** Stored time dilation to restore after hit stop */
-	float PreHitStopTimeDilation;
-
 	/** Helper to handle sticking logic */
 	void StickToTarget(const FHitResult& Hit);
 

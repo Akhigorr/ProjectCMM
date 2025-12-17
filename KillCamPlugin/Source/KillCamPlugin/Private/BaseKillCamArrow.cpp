@@ -4,6 +4,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/PrimitiveComponent.h"
 
 ABaseKillCamArrow::ABaseKillCamArrow()
 {
@@ -13,6 +14,7 @@ ABaseKillCamArrow::ABaseKillCamArrow()
 	USphereComponent* CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->SetCollisionProfileName("Projectile");
+	CollisionComp->SetUseCCD(true); // Prevent tunneling at high speeds
 	RootComponent = CollisionComp;
 
 	// Create Movement Component
@@ -58,7 +60,10 @@ void ABaseKillCamArrow::BeginPlay()
 	if (GetOwner())
 	{
 		// MoveIgnoreActor adds the owner to the IgnoreActors list for all primitive components
-		MoveIgnoreActor(GetOwner());
+		if (UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(RootComponent))
+		{
+			RootPrim->IgnoreActorWhenMoving(GetOwner(), true);
+		}
 
 		// Explicitly ensure the movement component knows (if it has specific ignore logic)
 		if (KillCamComponent)

@@ -44,3 +44,50 @@ void UKillCamWorldSubsystem::ExitKillCamAudioState()
 		UGameplayStatics::PopSoundMixModifier(GetWorld(), CachedSoundMix);
 	}
 }
+
+void UKillCamWorldSubsystem::RegisterTimeDilationRequest(const UObject* Requester, float Value)
+{
+	if (!Requester) return;
+
+	TimeDilationRequests.Add(Requester, Value);
+	UpdateGlobalTimeDilation();
+}
+
+void UKillCamWorldSubsystem::UnregisterTimeDilationRequest(const UObject* Requester)
+{
+	if (!Requester) return;
+
+	TimeDilationRequests.Remove(Requester);
+	UpdateGlobalTimeDilation();
+}
+
+void UKillCamWorldSubsystem::UpdateGlobalTimeDilation()
+{
+	if (!GetWorld()) return;
+
+	float LowestDilation = 1.0f;
+	bool bHasActiveRequests = false;
+
+	// Iterate and find the lowest value
+	for (auto It = TimeDilationRequests.CreateIterator(); It; ++It)
+	{
+		// Check validity of the requester (WeakPtr)
+		if (It.Key().IsValid())
+		{
+			float Val = It.Value();
+			if (Val < LowestDilation)
+			{
+				LowestDilation = Val;
+			}
+			bHasActiveRequests = true;
+		}
+		else
+		{
+			// Cleanup invalid/dead objects
+			It.RemoveCurrent();
+		}
+	}
+
+	// Apply
+	UGameplayStatics::SetGlobalTimeDilation(this, LowestDilation);
+}
