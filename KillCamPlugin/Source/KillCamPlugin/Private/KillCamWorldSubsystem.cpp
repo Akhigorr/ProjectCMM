@@ -5,6 +5,7 @@ void UKillCamWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	ResetEnvironmentStats();
+	ActiveKillCamCount = 0;
 }
 
 void UKillCamWorldSubsystem::SetEnvironmentStats(const FArrowEnvironmentStats& NewStats)
@@ -26,21 +27,51 @@ void UKillCamWorldSubsystem::SetAudioSettings(USoundMix* Mix, USoundClass* Class
 	CachedSoundClass = Class;
 }
 
-void UKillCamWorldSubsystem::EnterKillCamAudioState()
+void UKillCamWorldSubsystem::RegisterKillCamStart(float TargetTimeDilation)
 {
-	if (CachedSoundMix && GetWorld())
-	{
-		UGameplayStatics::PushSoundMixModifier(GetWorld(), CachedSoundMix);
-	}
+	ActiveKillCamCount++;
 
-	// If the user provided a sound class, we might want to duck everything else?
-	// Usually SoundMix handles the ducking rules internally, so pushing it is enough.
+	if (ActiveKillCamCount == 1)
+	{
+		// First kill cam active -> Apply Global Effects
+		if (GetWorld())
+		{
+			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), TargetTimeDilation);
+
+			if (CachedSoundMix)
+			{
+				UGameplayStatics::PushSoundMixModifier(GetWorld(), CachedSoundMix);
+			}
+		}
+	}
+	else
+	{
+		// Ensure we are using the lowest dilation (slowest) if multiple are active
+		float Current = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+		if (TargetTimeDilation < Current)
+		{
+			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), TargetTimeDilation);
+		}
+	}
 }
 
-void UKillCamWorldSubsystem::ExitKillCamAudioState()
+void UKillCamWorldSubsystem::RegisterKillCamStop()
 {
-	if (CachedSoundMix && GetWorld())
+	ActiveKillCamCount--;
+
+	if (ActiveKillCamCount <= 0)
 	{
-		UGameplayStatics::PopSoundMixModifier(GetWorld(), CachedSoundMix);
+		ActiveKillCamCount = 0;
+
+		// Last kill cam ended -> Restore Global Effects
+		if (GetWorld())
+		{
+			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+
+			if (CachedSoundMix)
+			{
+				UGameplayStatics::PopSoundMixModifier(GetWorld(), CachedSoundMix);
+			}
+		}
 	}
 }

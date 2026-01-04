@@ -40,6 +40,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arc Target|Stats")
 	int32 ScoreValue;
 
+	/** Impulse strength to apply when shattering (pushes debris outward). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arc Target|Chaos")
+	float ExplosionImpulseStrength;
+
+	/** Radius of the explosion force. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arc Target|Chaos")
+	float ExplosionRadius;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Arc Target|State")
 	bool bIsShattered;
 
@@ -51,7 +59,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arc Target")
 	virtual void HandleHit(FVector ImpactPoint, FVector ImpactNormal, bool bIsRicochet);
 
+	/**
+	 * Triggers the destruction logic.
+	 * @param ImpactPoint - Location of the hit (optional, uses ActorLocation if Zero).
+	 * @param ImpactDirection - Direction of the impulse (optional).
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Arc Target")
-	virtual void Shatter();
+	virtual void Shatter(FVector ImpactPoint = FVector::ZeroVector, FVector ImpactDirection = FVector::ZeroVector);
 
 };

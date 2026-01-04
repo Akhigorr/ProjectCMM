@@ -2,33 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "KillCamTypes.h"
 #include "RealisticArrowMovementComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnArrowImpact, const FHitResult&, Hit, bool, bIsRicochet);
-
-/**
- * Struct to bundle arrow physics settings for easy configuration.
- */
-USTRUCT(BlueprintType)
-struct FArrowBallisticStats
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float QuadraticDragCoefficient = 0.0001f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float GravityScale = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float FletchingRotationSpeed = 360.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	float PenetrationDepth = 15.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Stats")
-	bool bEnableBounce = true;
-};
 
 /**
  * AAA Realistic Arrow Physics: Variable Drag, Wind, Spin, Oscillation, and Smart Ricochet.
@@ -45,7 +22,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arrow Physics")
 	void ApplyBallisticStats(const FArrowBallisticStats& Stats);
 
+	/** Optional preset to apply on spawn. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Physics")
+	EArrowPreset InitialPreset;
+
+	/** If not "Standard", applies the preset values on BeginPlay. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arrow Physics")
+	bool bApplyPresetOnBeginPlay;
+
 protected:
+	virtual void OnRegister() override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void HandleImpact(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta) override;
 	virtual FVector ComputeAcceleration(const FVector& InVelocity, float DeltaTime) const override;
